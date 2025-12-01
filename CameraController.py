@@ -1,3 +1,6 @@
+import time
+import math
+
 class CameraController:
     """
     Role: Manage 3D camera movement and user interaction.
@@ -41,7 +44,7 @@ class CameraController:
         self.view_matrix = None
         
         # Time tracking
-        import time
+        
         self.last_time = time.time()
     
     def apply(self) -> None:
@@ -49,7 +52,6 @@ class CameraController:
         Apply current camera transformations.
         This method updates the camera view matrix based on current state.
         """
-        import math
         
         # Calculate camera position using spherical coordinates
         angle_h_rad = math.radians(self.angle_x)
@@ -82,7 +84,6 @@ class CameraController:
     
     def _calculate_up_vector(self):
         """Calculate up vector considering roll angle"""
-        import math
         
         # Start with standard up vector
         up_vector = [0.0, 1.0, 0.0]
@@ -139,7 +140,6 @@ class CameraController:
     
     def update_input(self):
         """Update camera based on keyboard input"""
-        import time
         current_time = time.time()
         delta_time = current_time - self.last_time
         self.last_time = current_time
@@ -173,7 +173,6 @@ class CameraController:
     
     def calculate_camera_position(self):
         """Calculate camera position using spherical coordinates"""
-        import math
         
         angle_h_rad = math.radians(self.angle_x)
         angle_v_rad = math.radians(self.angle_y)

@@ -1,6 +1,6 @@
 from OpenGL.GL import *
-from OpenGL.GLUT import *
 from OpenGL.GLU import *
+from OpenGL.GLUT import *
 
 class Agent:
     def __init__(self, x, y, color):
@@ -8,7 +8,7 @@ class Agent:
         self.y = y
         self.color = color
 
-class AgentRenderer:
+class AgentRender:
     def __init__(self, cell_size=60):
         self.cell_size = cell_size
     

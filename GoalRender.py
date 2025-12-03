@@ -1,11 +1,13 @@
+
 import time
 import math
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
 class GoalRender:
-    def __init__(self, cellSize = 1.0):
+    def __init__(self, cellSize=1.0, grid_size=25):
         self.cellSize = cellSize
+        self.grid_size = grid_size
         self.goalRadius = 0.3
         self.goalHeight = 0.42
         self.goalColor = (1.0, 1.0, 0.0)
@@ -37,7 +39,6 @@ class GoalRender:
             glLightfv(GL_LIGHT0, GL_SPECULAR, [1.0, 1.0, 1.0, 1.0])
 
     def draw_goal(self, agent):
-
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
@@ -47,8 +48,11 @@ class GoalRender:
         glDisable(GL_BLEND)
 
     def render_single_goal(self, gx, gy):
-        screen_x = gx * self.cellSize + self.cellSize / 2.0
-        screen_z = gy * self.cellSize + self.cellSize / 2.0
+        # Convert grid coordinates to world coordinates
+        # gx, gy are grid positions (e.g., 24, 24)
+        # We need to convert them to world space like we do for the agent
+        screen_x = (gx - self.grid_size//2) * self.cellSize
+        screen_z = (gy - self.grid_size//2) * self.cellSize
 
         current_time = time.time() - self.startTime
 
@@ -59,18 +63,15 @@ class GoalRender:
             screen_y = self.goalHeight
 
         self.draw_goal_rings(screen_x, screen_z, current_time)
-
         self.draw_goal_shadow(screen_x, screen_z, screen_y)
 
         glPushMatrix()
-        
         glTranslatef(screen_x, screen_y, screen_z)
 
         rotation = (current_time * 20.0) % 360.0
         glRotatef(rotation, 0, 1, 0)
         
         self.draw_goal_sphere()
-        
         glPopMatrix()
 
     def draw_goal_sphere(self):
@@ -156,9 +157,7 @@ class GoalRender:
             ring_time = (current_time - time_offset) % ring_duration
             
             progress = ring_time / ring_duration
-            
             radius = 0.1 + (progress * 0.6)
-            
             alpha = 0.5 * (1.0 - progress)
             
             glColor4f(1.0, 1.0, 0.0, alpha)
@@ -173,4 +172,3 @@ class GoalRender:
         
         glDisable(GL_BLEND)
         glPopMatrix()
-

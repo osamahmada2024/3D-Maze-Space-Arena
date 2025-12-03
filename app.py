@@ -1,3 +1,4 @@
+
 import sys
 import time
 import pygame
@@ -14,7 +15,7 @@ from AgentRender import AgentRender
 from GridGenerator import GridGenerator
 from CameraController import CameraController
 from PathfindingEngine import PathfindingEngine
-from EnvironmentRender import EnvironmentRender  # Imported for consistency; minimal usage in 3D
+from EnvironmentRender import EnvironmentRender
 
 # Screen configuration
 WIDTH, HEIGHT = 1200, 800
@@ -28,7 +29,7 @@ def init_opengl():
     glEnable(GL_LINE_SMOOTH)
     glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
 
-def setup_view(camera: CameraController):
+def setup_view(camera):
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
     gluPerspective(60, WIDTH / HEIGHT, 0.1, 100.0)
@@ -66,22 +67,76 @@ def draw_grid_3d(grid_size):
     glVertex3f(-half, 0, half)
     glEnd()
 
-def draw_obstacles(grid, utils):
+def draw_cube_manual(size):
+    """Draw a cube using GL_QUADS (no GLUT dependency)"""
+    s = size / 2.0
+    
+    glBegin(GL_QUADS)
+    
+    # Front face
+    glNormal3f(0, 0, 1)
+    glVertex3f(-s, -s, s)
+    glVertex3f(s, -s, s)
+    glVertex3f(s, s, s)
+    glVertex3f(-s, s, s)
+    
+    # Back face
+    glNormal3f(0, 0, -1)
+    glVertex3f(-s, -s, -s)
+    glVertex3f(-s, s, -s)
+    glVertex3f(s, s, -s)
+    glVertex3f(s, -s, -s)
+    
+    # Top face
+    glNormal3f(0, 1, 0)
+    glVertex3f(-s, s, -s)
+    glVertex3f(-s, s, s)
+    glVertex3f(s, s, s)
+    glVertex3f(s, s, -s)
+    
+    # Bottom face
+    glNormal3f(0, -1, 0)
+    glVertex3f(-s, -s, -s)
+    glVertex3f(s, -s, -s)
+    glVertex3f(s, -s, s)
+    glVertex3f(-s, -s, s)
+    
+    # Right face
+    glNormal3f(1, 0, 0)
+    glVertex3f(s, -s, -s)
+    glVertex3f(s, s, -s)
+    glVertex3f(s, s, s)
+    glVertex3f(s, -s, s)
+    
+    # Left face
+    glNormal3f(-1, 0, 0)
+    glVertex3f(-s, -s, -s)
+    glVertex3f(-s, -s, s)
+    glVertex3f(-s, s, s)
+    glVertex3f(-s, s, -s)
+    
+    glEnd()
+
+def draw_obstacles(grid):
+    """Draw obstacles as cubes"""
     glColor3f(0.2, 0.2, 0.3)
-    for y in range(len(grid)):
+    grid_size = len(grid)
+    
+    for y in range(grid_size):
         for x in range(len(grid[0])):
             if grid[y][x] == 1:
-                wx = (x - len(grid)//2) * CELL_SIZE
-                wz = (y - len(grid)//2) * CELL_SIZE
+                wx = (x - grid_size//2) * CELL_SIZE
+                wz = (y - grid_size//2) * CELL_SIZE
+                
                 glPushMatrix()
                 glTranslatef(wx, 0.5, wz)
-                glutSolidCube(CELL_SIZE * 0.9)
+                draw_cube_manual(CELL_SIZE * 0.9)
                 glPopMatrix()
 
 def main():
     # Run menu to select agent and algorithm
     menu = MenuManager()
-    menu.run()  # Continues until user makes a selection
+    menu.run()
 
     selected_agent = menu.selected_agent
     selected_algo = menu.selected_algo
@@ -93,6 +148,7 @@ def main():
     print(f"Selected Agent: {selected_agent}")
     print(f"Selected Algorithm: {selected_algo}")
 
+    # Initialize Pygame and OpenGL
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.DOUBLEBUF | pygame.OPENGL)
     pygame.display.set_caption("3D Maze-𝕊pace Arena - The Ultimate Pathfinding Experience")
@@ -110,36 +166,57 @@ def main():
     # Ensure start and goal positions are free
     start = (0, 0)
     goal = (GRID_SIZE-1, GRID_SIZE-1)
-    while not utils.free(*start):
+    
+    max_attempts = 100
+    attempts = 0
+    while not utils.free(*start) and attempts < max_attempts:
         start = (random.randint(0, GRID_SIZE//3), random.randint(0, GRID_SIZE//3))
-    while not utils.free(*goal):
+        attempts += 1
+    
+    attempts = 0
+    while not utils.free(*goal) and attempts < max_attempts:
         goal = (random.randint(GRID_SIZE//2, GRID_SIZE-1), random.randint(GRID_SIZE//2, GRID_SIZE-1))
+        attempts += 1
+
+    # Make sure start and goal are free
+    grid[start[1]][start[0]] = 0
+    grid[goal[1]][goal[0]] = 0
 
     # Compute path using the selected algorithm
     engine = PathfindingEngine(grid)
-    path = engine.find_path(start, goal, selected_algo)
+    
+    # Map algorithm names
+    algo_map = {
+        "A* search": "astar",
+        "Dijkstra": "dijkstra",
+        "DFS": "dfs",
+        "BFS": "bfs"
+    }
+    algo_name = algo_map.get(selected_algo, selected_algo.lower())
+    
+    path = engine.find_path(start, goal, algo_name)
     if not path:
         print("No path could be found!")
         return
 
     # Create agent based on selection
-    speed = 2.0  # Default
-    color = (0.0, 1.0, 1.0)  # Default cyan
+    speed = 2.0
+    color = (0.0, 1.0, 1.0)
     if selected_agent == "AC":
         speed = 1.5
-        color = (1.0, 0.0, 0.0)  # Red
+        color = (1.0, 0.0, 0.0)
     elif selected_agent == "ACS":
         speed = 2.5
-        color = (0.0, 1.0, 0.0)  # Green
+        color = (0.0, 1.0, 0.0)
     elif selected_agent == "Hybrid":
         speed = 3.0
-        color = (0.0, 0.0, 1.0)  # Blue
+        color = (0.0, 0.0, 1.0)
 
     agent = Agent(start, goal, path, speed, color)
 
     # Visualization systems
     agent_renderer = AgentRender(cell_size=CELL_SIZE)
-    path_renderer = PathRender(cell_size=CELL_SIZE)
+    path_renderer = PathRender(cell_size=CELL_SIZE, grid_size=GRID_SIZE)
     goal_renderer = GoalRender(cellSize=CELL_SIZE)
     camera = CameraController(distance=30, angle_x=45, angle_y=35)
 
@@ -158,26 +235,31 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
             elif event.type == pygame.MOUSEWHEEL:
                 camera.distance -= event.y * 2
                 camera.distance = max(5, min(60, camera.distance))
 
         # Camera control via keys
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT]:  camera.angle_x -= 60 * dt
-        if keys[pygame.K_RIGHT]: camera.angle_x += 60 * dt
-        if keys[pygame.K_UP]:    camera.angle_y += 60 * dt
-        if keys[pygame.K_DOWN]:  camera.angle_y -= 60 * dt
+        if keys[pygame.K_LEFT]:  
+            camera.angle_x -= 60 * dt
+        if keys[pygame.K_RIGHT]: 
+            camera.angle_x += 60 * dt
+        if keys[pygame.K_UP]:    
+            camera.angle_y += 60 * dt
+        if keys[pygame.K_DOWN]:  
+            camera.angle_y -= 60 * dt
         camera.angle_y = max(-89, min(89, camera.angle_y))
 
         # Update agent
         agent.update(dt)
 
         # Center camera on agent
-        wx = (agent.position[0] - GRID_SIZE//2) * CELL_SIZE
-        wz = (agent.position[2] - GRID_SIZE//2) * CELL_SIZE
+        wx = (agent.position[0]) * CELL_SIZE
+        wz = (agent.position[2]) * CELL_SIZE
         camera.target = [wx, 0, wz]
 
         # Rendering
@@ -186,7 +268,7 @@ def main():
 
         # Floor and grid
         draw_grid_3d(GRID_SIZE)
-        draw_obstacles(grid, utils)
+        draw_obstacles(grid)
 
         # Draw remaining path and phosphorescent trail
         path_renderer.draw_path(agent)
@@ -196,24 +278,34 @@ def main():
         goal_renderer.draw_goal(agent)
 
         # Draw agent (glowing sphere)
+        agent_x = agent.position[0] - GRID_SIZE//2
+        agent_z = agent.position[2] - GRID_SIZE//2
+        
         glPushMatrix()
-        glTranslatef(agent.position[0] - GRID_SIZE//2, 0.3, agent.position[2] - GRID_SIZE//2)
+        glTranslatef(agent_x, 0.3, agent_z)
         glColor3f(*agent.color)
+        
+        # Main sphere
         quad = gluNewQuadric()
         gluSphere(quad, 0.25, 24, 24)
         gluDeleteQuadric(quad)
-
+        
         # External glow effect
         glDisable(GL_DEPTH_TEST)
         glColor4f(*agent.color, 0.15)
-        gluSphere(quad, 0.4, 16, 16)
+        quad_glow = gluNewQuadric()
+        gluSphere(quad_glow, 0.4, 16, 16)
+        gluDeleteQuadric(quad_glow)
         glEnable(GL_DEPTH_TEST)
+        
         glPopMatrix()
 
         # Display victory message
         if agent.arrived:
-            print("Goal reached! Congratulations!")
-            # Optional: draw on-screen text
+            # Only print once
+            if not hasattr(agent, '_victory_printed'):
+                print("Goal reached! Congratulations!")
+                agent._victory_printed = True
 
         pygame.display.flip()
         clock.tick(60)
@@ -222,9 +314,4 @@ def main():
     sys.exit()
 
 if __name__ == "__main__":
-    try:
-        from OpenGL.GLUT import glutSolidCube, glutInit
-        glutInit()
-    except:
-        print("Warning: GLUT not available. Obstacles will be rendered as spheres instead of cubes.")
     main()

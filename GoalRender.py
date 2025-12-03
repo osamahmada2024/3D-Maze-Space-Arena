@@ -1,9 +1,9 @@
-from OpenGL.GL import *
-from OpenGL.GLU import *
 import time
 import math
+from OpenGL.GL import *
+from OpenGL.GLU import *
 
-class GoalRenderer:
+class GoalRender:
     def __init__(self, cellSize = 1.0):
         self.cellSize = cellSize
         self.goalRadius = 0.3
@@ -173,3 +173,4 @@ class GoalRenderer:
         
         glDisable(GL_BLEND)
         glPopMatrix()
+

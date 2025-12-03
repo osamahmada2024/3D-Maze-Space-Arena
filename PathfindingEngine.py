@@ -1,5 +1,6 @@
 import heapq
 from collections import deque
+from GridUtils import GridUtils
 from typing import List, Tuple, Dict, Optional
 
 class PathfindingEngine:

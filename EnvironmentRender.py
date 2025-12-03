@@ -1,6 +1,6 @@
+import sys
 import pygame
 import random
-import sys
 from typing import List, Tuple
 
 # ==================== CONFIG ====================
@@ -31,7 +31,7 @@ class RenderConfig:
 
 
 # ==================== ENVIRONMENT RENDERER  ====================
-class EnvironmentRenderer:
+class EnvironmentRender:
 
     def __init__(self, grid: List[List[int]], cfg: RenderConfig = RenderConfig()):
         """Initialize with grid and configuration."""
@@ -211,46 +211,46 @@ class EnvironmentRenderer:
 
 
 # ==================== HELPERS FOR TESTING (Can be removed) ====================
-# class GridGenerator:
-#     """Generate random grids with obstacles."""
+class GridGenerator:
+    """Generate random grids with obstacles."""
 
-#     def __init__(self, grid_size: int = 16, obstacle_prob: float = 0.18):
-#         self.grid_size = grid_size
-#         self.obstacle_prob = obstacle_prob
-#         self.grid = []
+    def __init__(self, grid_size: int = 16, obstacle_prob: float = 0.18):
+        self.grid_size = grid_size
+        self.obstacle_prob = obstacle_prob
+        self.grid = []
 
-#     def generate(self) -> List[List[int]]:
-#         """Generate a random grid (0=free, 1=obstacle)."""
-#         self.grid = []
-#         for y in range(self.grid_size):
-#             row = []
-#             for x in range(self.grid_size):
-#                 val = 1 if random.random() < self.obstacle_prob else 0
-#                 row.append(val)
-#             self.grid.append(row)
-#         return self.grid
-
-
-# class GridUtils:
-#     """Utility functions for grid operations."""
-
-#     def __init__(self, grid: List[List[int]]):
-#         self.grid = grid
-#         self.rows = len(grid)
-#         self.cols = len(grid[0]) if self.rows else 0
-
-#     def in_bounds(self, x: int, y: int) -> bool:
-#         """Check if coordinates are within grid bounds."""
-#         return 0 <= x < self.cols and 0 <= y < self.rows
-
-#     def free(self, x: int, y: int) -> bool:
-#         """Check if a cell is free (0)."""
-#         if not self.in_bounds(x, y):
-#             return False
-#         return self.grid[y][x] == 0
+    def generate(self) -> List[List[int]]:
+        """Generate a random grid (0=free, 1=obstacle)."""
+        self.grid = []
+        for y in range(self.grid_size):
+            row = []
+            for x in range(self.grid_size):
+                val = 1 if random.random() < self.obstacle_prob else 0
+                row.append(val)
+            self.grid.append(row)
+        return self.grid
 
 
-# ==================== MAIN (For Testing) ====================
+class GridUtils:
+    """Utility functions for grid operations."""
+
+    def __init__(self, grid: List[List[int]]):
+        self.grid = grid
+        self.rows = len(grid)
+        self.cols = len(grid[0]) if self.rows else 0
+
+    def in_bounds(self, x: int, y: int) -> bool:
+        """Check if coordinates are within grid bounds."""
+        return 0 <= x < self.cols and 0 <= y < self.rows
+
+    def free(self, x: int, y: int) -> bool:
+        """Check if a cell is free (0)."""
+        if not self.in_bounds(x, y):
+            return False
+        return self.grid[y][x] == 0
+
+
+# # ==================== MAIN (For Testing) ====================
 # def main():
 #     """Main application loop."""
 #     GRID_SIZE = 20
@@ -275,7 +275,7 @@ class EnvironmentRenderer:
 #             break
 
 #     # Create renderer (THIS IS THE MAIN CLASS FROM PAGE 7)
-#     renderer = EnvironmentRenderer(grid)
+#     renderer = EnvironmentRender(grid)
 #     screen = renderer.make_window()
 #     clock = pygame.time.Clock()
 

@@ -1,7 +1,7 @@
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
-class PathRenderer:
+class PathRender:
     """
     Role: Renders the agent's remaining path and the phosphorescent movement trail.
     """

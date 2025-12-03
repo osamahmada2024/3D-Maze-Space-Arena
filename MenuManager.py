@@ -1,6 +1,6 @@
 import pygame, sys, math
 
-class MenuApp:
+class MenuManager:
     def __init__(self):
         pygame.init()
         self.WIDTH, self.HEIGHT = 800, 600
@@ -96,13 +96,11 @@ class MenuApp:
                             self.cursor_pos = 0
                         else:
                             self.selected_algo = self.algorithms[self.cursor_pos]
+                            self.running = False  # Exit loop after selection
 
             self.draw_menu(t)
             pygame.display.flip()
             self.clock.tick(60)
 
         pygame.quit()
-        sys.exit()
-
-if __name__ == "__main__":
-    MenuApp().run()
+        # Removed sys.exit() to continue program execution

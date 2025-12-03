@@ -1,12 +1,7 @@
 from OpenGL.GL import *
+from Agent import Agent
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
-
-class Agent:
-    def __init__(self, x, y, color):
-        self.x = x
-        self.y = y
-        self.color = color
 
 class AgentRender:
     def __init__(self, cell_size=60):
@@ -32,45 +27,3 @@ class AgentRender:
             glVertex2f(0, j)
             glVertex2f(width, j)
         glEnd()
-
-WINDOW_WIDTH = 800
-WINDOW_HEIGHT = 800
-
-renderer = AgentRenderer()
-agents = [
-    Agent(5, 5, (0.0, 1.0, 0.0)),
-    Agent(10, 10, (1.0, 0.0, 0.0))
-]
-
-def init():
-    glClearColor(0.0, 0.0, 0.0, 1.0)
-    glMatrixMode(GL_PROJECTION)
-    glLoadIdentity()
-    gluOrtho2D(0, WINDOW_WIDTH, 0, WINDOW_HEIGHT)
-
-def display():
-    glClear(GL_COLOR_BUFFER_BIT)
-    glMatrixMode(GL_MODELVIEW)
-    glLoadIdentity()
-    
-    renderer.draw_grid(WINDOW_WIDTH, WINDOW_HEIGHT)
-    
-    for agent in agents:
-        renderer.draw(agent)
-    
-    glutSwapBuffers()
-
-def main():
-    try:
-        glutInit()
-        glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB)
-        glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT)
-        glutCreateWindow("Agent Renderer - Improved Version")
-        init()
-        glutDisplayFunc(display)
-        glutMainLoop()
-    except Exception as e:
-        print(f"Error initializing GLUT: {e}. Ensure PyOpenGL is installed and the system supports OpenGL.")
-
-if __name__ == "__main__":
-    main()

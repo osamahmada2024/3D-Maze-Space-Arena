@@ -1,4 +1,3 @@
-
 import sys
 import time
 import pygame
@@ -89,7 +88,7 @@ def draw_grid_3d(grid_size):
     glEnable(GL_LIGHTING)
 
 def draw_cube_manual(size):
-    """Draw a cube using GL_QUADS (no GLUT dependency)"""
+    """Draw a cube using GL_QUADS"""
     s = size / 2.0
     
     glBegin(GL_QUADS)
@@ -139,7 +138,7 @@ def draw_cube_manual(size):
     glEnd()
 
 def draw_obstacles(grid):
-    """Draw obstacles as cubes WITH proper depth"""
+    """Draw obstacles as cubes"""
     glEnable(GL_LIGHTING)
     glColor3f(0.2, 0.2, 0.3)
     grid_size = len(grid)
@@ -156,18 +155,18 @@ def draw_obstacles(grid):
                 glPopMatrix()
 
 def main():
-    # Run menu to select agent and algorithm
+    # Run menu to select agent shape and algorithm
     menu = MenuManager()
     menu.run()
 
-    selected_agent = menu.selected_agent
+    selected_shape = menu.selected_agent  # This is now the shape key
     selected_algo = menu.selected_algo
 
-    if not selected_agent or not selected_algo:
+    if not selected_shape or not selected_algo:
         print("No selection made. Exiting...")
         return
 
-    print(f"Selected Agent: {selected_agent}")
+    print(f"Selected Agent Shape: {selected_shape}")
     print(f"Selected Algorithm: {selected_algo}")
 
     # Initialize Pygame and OpenGL
@@ -210,27 +209,25 @@ def main():
         print("No path could be found!")
         return
 
-    # Create agent based on selection
-    speed = 2.0
-    color = (0.0, 1.0, 1.0)
-    if selected_agent == "AC":
-        speed = 1.5
-        color = (1.0, 0.0, 0.0)
-    elif selected_agent == "ACS":
-        speed = 2.5
-        color = (0.0, 1.0, 0.0)
-    elif selected_agent == "Hybrid":
-        speed = 3.0
-        color = (0.0, 0.0, 1.0)
+    # Assign colors based on shape type (for variety)
+    shape_colors = {
+        "sphere_droid": (0.0, 1.0, 1.0),   # Cyan
+        "robo_cube": (1.0, 0.3, 0.3),      # Red
+        "mini_drone": (0.2, 0.7, 0.3),     # Natural Green (not bright)
+        "crystal_alien": (0.8, 0.3, 1.0)   # Purple
+    }
+    
+    agent_color = shape_colors.get(selected_shape, (0.0, 1.0, 1.0))
+    agent_speed = 2.5
 
-    agent = Agent(start, goal, path, speed, color)
+    # Create agent with shape type
+    agent = Agent(start, goal, path, agent_speed, agent_color, selected_shape)
 
     # Visualization systems
-    agent_renderer = AgentRender(cell_size=CELL_SIZE)
+    agent_renderer = AgentRender(cell_size=CELL_SIZE, grid_size=GRID_SIZE)
     path_renderer = PathRender(cell_size=CELL_SIZE, grid_size=GRID_SIZE)
-    goal_renderer = GoalRender(cellSize=CELL_SIZE, grid_size=GRID_SIZE)  # أضفت grid_size
+    goal_renderer = GoalRender(cellSize=CELL_SIZE, grid_size=GRID_SIZE)
     
-    # ✨ الكاميرا أقرب ومتابعة أحسن ✨
     camera = CameraController(distance=15, angle_x=45, angle_y=45)
 
     # Control variables
@@ -239,6 +236,7 @@ def main():
 
     print("3D Maze-𝕊pace Arena initialized successfully!")
     print(f"Start: {start} | Goal: {goal} | Path length: {len(path)} steps")
+    print(f"Agent Shape: {selected_shape}")
 
     while running:
         current_time = time.time()
@@ -253,7 +251,6 @@ def main():
                     running = False
             elif event.type == pygame.MOUSEWHEEL:
                 camera.distance -= event.y * 2
-                # ✨ Range أصغر للـ zoom (3-40 بدل 5-60) ✨
                 camera.distance = max(3, min(40, camera.distance))
 
         # Camera control via keys
@@ -271,13 +268,13 @@ def main():
         # Update agent
         agent.update(dt)
 
-        # ✨ Center camera on agent position (including Y height!) ✨
+        # Center camera on agent position
         wx = (agent.position[0]) * CELL_SIZE
-        wy = agent.position[1]  # ارتفاع الـ Agent (0.3)
+        wy = agent.position[1]
         wz = (agent.position[2]) * CELL_SIZE
         camera.target = [wx, wy, wz]
 
-        # === RENDERING - ORDER MATTERS FOR DEPTH! ===
+        # === RENDERING ===
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         setup_view(camera)
 
@@ -293,51 +290,19 @@ def main():
         path_renderer.draw_history(agent)
         glEnable(GL_LIGHTING)
         
-        # 4. ✨ Draw goal بس لو الـ Agent لسه مواصلش ✨
+        # 4. Draw goal (if not arrived)
         if not agent.arrived:
             glDisable(GL_LIGHTING)
             goal_renderer.draw_goal(agent)
             glEnable(GL_LIGHTING)
         
-        # 5. Draw agent
-        agent_x = agent.position[0] - GRID_SIZE//2
-        agent_z = agent.position[2] - GRID_SIZE//2
-        
-        glPushMatrix()
-        glTranslatef(agent_x, 0.3, agent_z)
-        
-        # Main solid sphere
-        glEnable(GL_DEPTH_TEST)
-        glDepthMask(GL_TRUE)
-        glEnable(GL_LIGHTING)
-        glColor3f(*agent.color)
-        
-        quad = gluNewQuadric()
-        gluQuadricNormals(quad, GLU_SMOOTH)
-        gluSphere(quad, 0.25, 24, 24)
-        gluDeleteQuadric(quad)
-        
-        # Glow effect
-        glDisable(GL_LIGHTING)
-        glDepthMask(GL_FALSE)
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glColor4f(*agent.color, 0.15)
-        
-        quad_glow = gluNewQuadric()
-        gluSphere(quad_glow, 0.4, 16, 16)
-        gluDeleteQuadric(quad_glow)
-        
-        # Restore states
-        glDepthMask(GL_TRUE)
-        glEnable(GL_LIGHTING)
-        
-        glPopMatrix()
+        # 5. Draw agent with selected shape
+        agent_renderer.draw_agent(agent, agent.shape_type)
 
         # Display victory message
         if agent.arrived:
             if not hasattr(agent, '_victory_printed'):
-                print("Goal reached! Congratulations!")
+                print("🎉 Goal reached! Congratulations!")
                 agent._victory_printed = True
 
         pygame.display.flip()

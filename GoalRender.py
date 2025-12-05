@@ -8,8 +8,8 @@ class GoalRender:
     def __init__(self, cellSize=1.0, grid_size=25):
         self.cellSize = cellSize
         self.grid_size = grid_size
-        self.goalRadius = 0.3
-        self.goalHeight = 0.42
+        self.goalRadius = 0.2
+        self.goalHeight = 0.4
         self.goalColor = (1.0, 1.0, 0.0)
 
         # bounce effect

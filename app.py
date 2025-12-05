@@ -303,7 +303,7 @@ def main():
         # Display victory message
         if agent.arrived:
             if not hasattr(agent, '_victory_printed'):
-                print("🎉 Goal reached! Congratulations!")
+                print("Goal reached! Congratulations!")
                 agent._victory_printed = True
 
         pygame.display.flip()
@@ -313,4 +313,5 @@ def main():
     sys.exit()
 
 if __name__ == "__main__":
+
     main()

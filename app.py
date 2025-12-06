@@ -15,7 +15,7 @@ from AgentRender import AgentRender
 from GridGenerator import GridGenerator
 from CameraController import CameraController
 from PathfindingEngine import PathfindingEngine
-from EnvironmentRender import EnvironmentRender
+from EnvironmentRender import EnvironmentRender3D
 
 # Screen configuration
 WIDTH, HEIGHT = 1200, 800
@@ -185,6 +185,9 @@ def main():
     grid = generator.generate()
     utils = GridUtils(grid)
 
+    env = EnvironmentRender3D(grid, cell_size=CELL_SIZE)
+
+
     # Ensure start and goal positions are free
     start = (0, 0)
     goal = (GRID_SIZE-1, GRID_SIZE-1)
@@ -231,7 +234,7 @@ def main():
     goal_renderer = GoalRender(cellSize=CELL_SIZE, grid_size=GRID_SIZE)  # أضفت grid_size
     
     # ✨ الكاميرا أقرب ومتابعة أحسن ✨
-    camera = CameraController(distance=15, angle_x=45, angle_y=45)
+    camera = CameraController(distance=25, angle_x=45, angle_y=45)
 
     # Control variables
     running = True
@@ -282,10 +285,11 @@ def main():
         setup_view(camera)
 
         # 1. Draw floor and grid
-        draw_grid_3d(GRID_SIZE)
-        
+       # draw_grid_3d(GRID_SIZE)
+        env.draw(current_time)
+
         # 2. Draw obstacles
-        draw_obstacles(grid)
+       # draw_obstacles(grid)
         
         # 3. Draw paths
         glDisable(GL_LIGHTING)
@@ -300,11 +304,11 @@ def main():
             glEnable(GL_LIGHTING)
         
         # 5. Draw agent
-        agent_x = agent.position[0] - GRID_SIZE//2
-        agent_z = agent.position[2] - GRID_SIZE//2
-        
+        agent_x = (agent.position[0] - GRID_SIZE//2) * CELL_SIZE
+        agent_z = (agent.position[2] - GRID_SIZE//2) * CELL_SIZE
+
         glPushMatrix()
-        glTranslatef(agent_x, 0.3, agent_z)
+        glTranslatef(agent_x, 0.35, agent_z)
         
         # Main solid sphere
         glEnable(GL_DEPTH_TEST)

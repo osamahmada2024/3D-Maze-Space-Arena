@@ -20,10 +20,11 @@ class PathRender:
 
         start_index = agent.path_i
         
-        glLineWidth(1.0)
+        glLineWidth(6.0)  # INCREASED from 1.0 to 6.0
         glEnable(GL_LINE_SMOOTH)
         
-        glColor3f(agent.color[0] * 0.5, agent.color[1] * 0.5, agent.color[2] * 0.5)
+        # BRIGHTER path color
+        glColor3f(agent.color[0] * 0.8, agent.color[1] * 0.8, agent.color[2] * 0.8)
 
         glBegin(GL_LINE_STRIP)
         for i in range(start_index, len(agent.path)):
@@ -45,6 +46,30 @@ class PathRender:
 
         history_length = len(agent.history)
         
+        glLineWidth(5.0)  # INCREASED from 3.0 to 5.0
+        glEnable(GL_LINE_SMOOTH)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        
+        glBegin(GL_LINE_STRIP)
+
+        for i, pos in enumerate(agent.history):
+            alpha = max(0.3, i / history_length)  # INCREASED from 0.2 to 0.3
+            glColor4f(agent.color[0], agent.color[1], agent.color[2], alpha)
+            
+            # pos is already in world coordinates from Agent.update()
+            glVertex3f((pos[0] - self.grid_size//2) * self.cell_size, 0.3, (pos[2] - self.grid_size//2) * self.cell_size)
+            
+        glEnd()
+        glDisable(GL_BLEND)
+        """
+        Draws the agent's historical movement trail with a glow effect.
+        """
+        if not agent.history:
+            return
+
+        history_length = len(agent.history)
+        
         glLineWidth(3.0)
         glEnable(GL_LINE_SMOOTH)
         
@@ -55,6 +80,6 @@ class PathRender:
             glColor4f(agent.color[0], agent.color[1], agent.color[2], alpha)
             
             # pos is already in world coordinates from Agent.update()
-            glVertex3f(pos[0] - self.grid_size//2, 0.3, pos[2] - self.grid_size//2)
+            glVertex3f((pos[0] - self.grid_size//2) * self.cell_size, 0.3, (pos[2] - self.grid_size//2) * self.cell_size)
             
         glEnd()

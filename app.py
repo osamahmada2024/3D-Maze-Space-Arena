@@ -17,6 +17,14 @@ from CameraController import CameraController
 from PathfindingEngine import PathfindingEngine
 from EnvironmentRender import EnvironmentRender
 
+# Forest Maze imports
+try:
+    from forest_maze import ForestScene
+    FOREST_MAZE_AVAILABLE = True
+except ImportError:
+    FOREST_MAZE_AVAILABLE = False
+    print("Warning: forest_maze module not available")
+
 # Screen configuration
 WIDTH, HEIGHT = 1200, 800
 CELL_SIZE = 1.0
@@ -156,19 +164,29 @@ def draw_obstacles(grid):
                 glPopMatrix()
 
 def main():
-    # Run menu to select agent and algorithm
-    menu = MenuManager()
+    # Run menu to select game mode
+    menu = MenuManager(include_forest_maze=FOREST_MAZE_AVAILABLE)
     menu.run()
 
+    selected_mode = menu.selected_mode
     selected_agent = menu.selected_agent
     selected_algo = menu.selected_algo
 
-    if not selected_agent or not selected_algo:
+    if not selected_mode or not selected_agent or not selected_algo:
         print("No selection made. Exiting...")
         return
-
+    
+    print(f"Selected Mode: {selected_mode}")
     print(f"Selected Agent: {selected_agent}")
     print(f"Selected Algorithm: {selected_algo}")
+    
+    # Route to appropriate game mode
+    if selected_mode == "Forest Maze":
+        run_forest_maze(selected_agent, selected_algo)
+        return
+    
+    # Standard maze mode continues below
+    print("Starting Standard Maze mode...")
 
     # Initialize Pygame and OpenGL
     pygame.init()
@@ -343,6 +361,113 @@ def main():
         pygame.display.flip()
         clock.tick(60)
 
+    pygame.quit()
+    sys.exit()
+
+def run_forest_maze(selected_agent: str = None, selected_algo: str = 'A* search'):
+    """Run the AAA Forest Maze game mode"""
+    if not FOREST_MAZE_AVAILABLE:
+        print("Forest Maze module not available. Using standard maze instead.")
+        main()
+        return
+    
+    # Initialize Pygame and OpenGL
+    pygame.init()
+    screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.DOUBLEBUF | pygame.OPENGL)
+    pygame.display.set_caption("[AAA Forest Maze] - The Ultimate Forest Experience")
+    clock = pygame.time.Clock()
+
+    init_opengl()
+
+    # Initialize forest scene
+    forest_scene = ForestScene(grid_size=25, cell_size=CELL_SIZE)
+    
+    # Initialize player (forest_scene.initialize will create a PathfindingEngine if None is provided)
+    start = (1, 1)
+    goal = (23, 23)
+    agent_color = (0.0, 1.0, 1.0)
+    # Map algorithm names to internal keys (reuse algo_map from main)
+    algo_map = {
+        "A* search": "astar",
+        "Dijkstra": "dijkstra",
+        "DFS": "dfs",
+        "BFS": "bfs"
+    }
+    algo_name = algo_map.get(selected_algo, selected_algo.lower() if selected_algo else 'astar')
+
+    player = forest_scene.initialize(None, start, goal, agent_color, algo=algo_name)
+    # reference to player is also available as forest_scene.player
+    player = forest_scene.player
+    
+    # Camera setup
+    camera = CameraController(distance=15, angle_x=45, angle_y=45)
+    
+    # Game loop
+    running = True
+    last_time = time.time()
+    
+    print("[FOREST MAZE] Initialized successfully!")
+    print(f"Start: {start} | Goal: {goal}")
+    print("Press ESC to exit | Arrow keys to rotate camera | Mouse wheel to zoom")
+
+    while running:
+        current_time = time.time()
+        dt = current_time - last_time
+        last_time = current_time
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+                elif event.key == pygame.K_d:
+                    # Toggle debug rendering of environment collision spheres
+                    forest_scene.environment_manager.debug = not getattr(forest_scene.environment_manager, 'debug', False)
+                    forest_scene.debug_render = not forest_scene.debug_render
+            elif event.type == pygame.MOUSEWHEEL:
+                camera.distance -= event.y * 2
+                camera.distance = max(3, min(40, camera.distance))
+
+        # Camera control
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT]:  
+            camera.angle_x -= 60 * dt
+        if keys[pygame.K_RIGHT]: 
+            camera.angle_x += 60 * dt
+        if keys[pygame.K_UP]:    
+            camera.angle_y += 60 * dt
+        if keys[pygame.K_DOWN]:  
+            camera.angle_y -= 60 * dt
+        camera.angle_y = max(-89, min(89, camera.angle_y))
+
+        # Update systems
+        forest_scene.update(dt)
+
+        # Update camera target to follow player
+        player_pos = player.get_position()
+        camera.target = list(player_pos)
+
+        # Rendering
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        setup_view(camera)
+
+        # Render scene
+        forest_scene.render()
+        
+        # Render player
+        forest_scene.render_player()
+
+        # Display victory message
+        if player.arrived:
+            if not hasattr(player, '_victory_printed'):
+                print("🎉 Goal reached! You navigated the forest maze successfully!")
+                player._victory_printed = True
+
+        pygame.display.flip()
+        clock.tick(60)
+
+    forest_scene.cleanup()
     pygame.quit()
     sys.exit()
 

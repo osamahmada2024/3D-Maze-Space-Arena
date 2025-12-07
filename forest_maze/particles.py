@@ -102,39 +102,28 @@ class FireflyParticleSystem:
     
     def render(self):
         """
-        Render fireflies using textured quads (billboards).
-        Creates a glow effect around each firefly.
+        Render fireflies as glowing points (optimized for performance).
+        Removed expensive sphere rendering.
         """
+        if not self.fireflies:
+            return
+        
         glDisable(GL_LIGHTING)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glPointSize(3.0)
         
-        # Inner bright core
-        glPointSize(2.0)
+        # Draw all fireflies as glowing points
         glBegin(GL_POINTS)
         for firefly in self.fireflies:
             r, g, b = firefly.color
-            glColor4f(r, g, b, firefly.brightness)
+            # Brighter glow effect
+            glColor4f(r, g, b, firefly.brightness * 0.9)
             x, y, z = firefly.get_position()
             glVertex3f(x, y, z)
         glEnd()
         
-        # Outer glow sphere
-        for firefly in self.fireflies:
-            glPushMatrix()
-            x, y, z = firefly.get_position()
-            glTranslatef(x, y, z)
-            
-            r, g, b = firefly.color
-            glColor4f(r, g, b, firefly.brightness * 0.4)
-            
-            quad = gluNewQuadric()
-            gluQuadricNormals(quad, GLU_SMOOTH)
-            gluSphere(quad, firefly.radius, 8, 8)
-            gluDeleteQuadric(quad)
-            
-            glPopMatrix()
-        
+        glPointSize(1.0)
         glEnable(GL_LIGHTING)
     
     def get_light_positions(self) -> List[Tuple[float, float, float]]:

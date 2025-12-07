@@ -15,7 +15,7 @@ class ForestMazeGenerator:
     Forest zones are open areas where trees can be freely placed.
     """
     
-    def __init__(self, grid_size: int = 25, forest_density: float = 0.3):
+    def __init__(self, grid_size: int = 25, forest_density: float = 0.25):
         """
         Initialize the forest maze generator.
         

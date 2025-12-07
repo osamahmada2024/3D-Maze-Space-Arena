@@ -1,268 +1,262 @@
 """
-Forest Scene
+Forest Scene with Enhanced Audio
 Main scene controller that integrates all forest systems.
+Uses standard Agent, PathfindingEngine, and PathRender.
 """
 
 import random
-import json
 from typing import List, Tuple, Dict
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
 from .maze_generator import ForestMazeGenerator
-from .environment_objects import EnvironmentObjectManager, render_tree_at
+from .environment_objects import render_tree_at, EnvironmentObjectManager
 from .particles import FireflyParticleSystem
-from .fog import FogSystem
 from .audio_system import AudioSystem
 from .slow_zones import SlowZoneManager
-from .player_controller import ForestPlayerController
 
 
 class ForestScene:
     """
-    Main forest maze scene controller.
-    Orchestrates maze generation, rendering, and all systems.
+    Main forest maze scene controller with enhanced audio.
     """
     
     def __init__(self, grid_size: int = 25, cell_size: float = 1.0, 
                  config: Dict = None):
-        """
-        Initialize forest scene.
-        
-        Args:
-            grid_size: Size of maze grid
-            cell_size: Size of each cell
-            config: Optional configuration dictionary
-        """
         self.grid_size = grid_size
         self.cell_size = cell_size
         self.config = config or self._default_config()
         
         # Core systems
-        self.maze_generator = ForestMazeGenerator(grid_size, 0.3)
+        self.maze_generator = ForestMazeGenerator(grid_size, 0.25)
         self.grid = None
         self.forest_zones = []
         self.slow_zone_positions = []
         
-        # Subsystems
+        # Enhanced subsystems
         self.environment_manager = EnvironmentObjectManager(grid_size, cell_size)
         self.firefly_system = FireflyParticleSystem(grid_size, cell_size, 
-                                                     self.config.get('num_fireflies', 50))
-        self.fog_system = FogSystem(
-            fog_color=tuple(self.config.get('fog_color', (0.2, 0.5, 0.3))),
-            fog_density=self.config.get('fog_density', 0.15),
-            fog_start=self.config.get('fog_start', 5.0),
-            fog_end=self.config.get('fog_end', 50.0)
-        )
-        self.audio_system = AudioSystem()
+        self.config.get('num_fireflies', 15))
+        self.audio_system = AudioSystem(assets_dir="assets/audio")
         self.slow_zone_manager = SlowZoneManager()
         
         # Player
         self.player = None
         
-        # Rendering state
+        # State
+        self._last_player_cell = None
         self.debug_render = False
+        
+        print("[SCENE] Forest scene initialized with enhanced audio")
     
     def _default_config(self) -> Dict:
-        """Return default configuration"""
+        """Return enhanced configuration"""
         return {
             'grid_size': 25,
             'cell_size': 1.0,
             'forest_density': 0.3,
-            'num_fireflies': 50,
-            'fog_color': (0.2, 0.5, 0.3),
-            'fog_density': 0.15,
-            'fog_start': 5.0,
-            'fog_end': 50.0,
-            'slow_zone_factor': 0.5,
-            'num_slow_zones': 20,
-            # Placement buffer (manhattan) around path/start/goal where objects won't be placed
-            'placement_buffer': 2,  # Increased from 1 to 2 for safer path
-            'removal_clearance': 0.25,  # Reduced from 0.35 to allow closer objects
+            'num_fireflies': 15,
+            'slow_zone_factor': 0.1,
+            'num_slow_zones': 10,
+            'audio_volume': 1,
         }
     
     def initialize(self, pathfinding_engine, start: Tuple[int, int] = (0, 0), 
                    goal: Tuple[int, int] = None, agent_color: Tuple[float, float, float] = (0.0, 1.0, 1.0),
                    algo: str = 'astar'):
-        """
-        Initialize the forest scene with maze and all systems.
-        
-        Args:
-            pathfinding_engine: PathfindingEngine instance for pathfinding
-            start: Starting position
-            goal: Goal position (defaults to opposite corner)
-            agent_color: Player color
-        
-        Returns:
-            player: The initialized player controller
-        """
+        """Initialize scene with maze and audio, using standard Agent and PathfindingEngine"""
         if goal is None:
             goal = (self.grid_size - 1, self.grid_size - 1)
         
-        # Generate maze and ensure it has a valid path
+        # Generate maze
         max_retries = 5
         path = None
         for attempt in range(max_retries):
             self.grid, self.forest_zones, self.slow_zone_positions = self.maze_generator.generate()
-
-            # If caller didn't pass a pathfinding engine, create one now with the generated grid
+            
             if pathfinding_engine is None:
                 try:
                     from PathfindingEngine import PathfindingEngine
                 except Exception:
-                    from .PathfindingEngine import PathfindingEngine
+                    from ..PathfindingEngine import PathfindingEngine
                 pathfinding_engine = PathfindingEngine(self.grid)
             else:
-                # Update grid in existing engine
                 pathfinding_engine.grid = self.grid
-
-            # Debug: check grid at start and goal
+            
+            # Check start/goal validity
             start_cell_value = self.grid[start[1]][start[0]]
             goal_cell_value = self.grid[goal[1]][goal[0]]
             
-            # Ensure start and goal are on walkable cells (0 = walkable, 1 = wall)
             if start_cell_value == 1 or goal_cell_value == 1:
                 if attempt < max_retries - 1:
-                    print(f"Attempt {attempt + 1}: Start cell={start_cell_value} or goal cell={goal_cell_value} on wall, regenerating maze...")
                     continue
                 else:
-                    print("ERROR: Could not generate maze with valid start/goal after retries!")
-                    # Fallback: use corners that are likely walkable
                     start = (1, 1)
                     goal = (self.grid_size - 2, self.grid_size - 2)
-
-            # Compute path using pathfinding engine
+            
+            # Find path using standard algorithm
             path = pathfinding_engine.find_path(start, goal, algo)
             if path:
-                print(f"[OK] Maze generated successfully with valid path (attempt {attempt + 1}, path length: {len(path)})")
+                print(f"[SCENE] Maze generated with path length: {len(path)}")
                 break
-            else:
-                if attempt < max_retries - 1:
-                    print(f"Attempt {attempt + 1}: No path found for {algo} from {start} to {goal}, regenerating maze...")
-                else:
-                    print("ERROR: Could not generate solvable maze after retries! Using straight line fallback.")
-                    path = [start, goal]
+            elif attempt == max_retries - 1:
+                path = [start, goal]
         
-        # Initialize environment objects from forest zones (trees only, no collision)
-        self.environment_manager.generate_from_forest_zones(self.forest_zones)
-        
-        # Initialize slow zones
+        # Initialize subsystems
+        self.environment_manager.generate_trees_from_grid(self.grid)
         self.slow_zone_manager.create_from_grid_positions(
             self.slow_zone_positions,
             self.grid_size,
             self.cell_size,
-            self.config.get('slow_zone_factor', 0.5)
+            self.config.get('slow_zone_factor', 0.4)
         )
         
-        # Initialize firefly system (already done in __init__)
-        
-        # Initialize audio zones
+        # Setup audio
         self._setup_audio_zones()
         
-        # Create and return player
-        self.player = ForestPlayerController(start, goal, path, 
-                                            speed=3.0, color=agent_color)  # Moderate speed
+        # Create player using standard Agent class
+        try:
+            from Agent import Agent
+        except ImportError:
+            from ..Agent import Agent
         
+        self.player = Agent(start, goal, path, speed=2.0, color=agent_color)
+        
+        print(f"[SCENE] Scene initialized with {len(self.environment_manager.trees)} trees")
         return self.player
-
+    
+    def _setup_audio_zones(self):
+        """Setup positional audio zones"""
+        half_grid = self.grid_size / 2 * self.cell_size
+        
+        # Wind zones
+        self.audio_system.add_sound_zone(
+            'wind_north',
+            (0, 3, -half_grid * 0.8),
+            sound_type='wind',
+            volume=0.4,
+            radius=20.0
+        )
+        
+        self.audio_system.add_sound_zone(
+            'wind_south',
+            (0, 3, half_grid * 0.8),
+            sound_type='wind',
+            volume=0.4,
+            radius=20.0
+        )
+        
+        # Bird zones
+        self.audio_system.add_sound_zone(
+            'birds_east',
+            (half_grid * 0.7, 4, 0),
+            sound_type='birds',
+            volume=0.3,
+            radius=15.0
+        )
+        
+        self.audio_system.add_sound_zone(
+            'birds_west',
+            (-half_grid * 0.7, 4, 0),
+            sound_type='birds',
+            volume=0.3,
+            radius=15.0
+        )
+        
+        print("[AUDIO] Audio zones setup complete")
+    
     def world_to_grid(self, pos: Tuple[float, float, float]) -> Tuple[int, int]:
-        """Convert world position to grid coordinates (x, y)."""
+        """Convert world position to grid coordinates"""
         xw, yw, zw = pos
         gx = int(round(xw / self.cell_size + self.grid_size // 2))
         gy = int(round(zw / self.cell_size + self.grid_size // 2))
         return gx, gy
     
-    def _setup_audio_zones(self):
-        """Set up audio zones around the forest"""
-        # Add ambient wind zones
-        half_grid = self.grid_size / 2 * self.cell_size
-        
-        self.audio_system.add_sound_zone(
-            'wind_north',
-            (-half_grid/2, 2, -half_grid),
-            sound_type='wind'
-        )
-        self.audio_system.add_sound_zone(
-            'wind_south',
-            (-half_grid/2, 2, half_grid),
-            sound_type='wind'
-        )
-        self.audio_system.add_sound_zone(
-            'birds_east',
-            (half_grid, 3, 0),
-            sound_type='birds'
-        )
-        self.audio_system.add_sound_zone(
-            'birds_west',
-            (-half_grid, 3, 0),
-            sound_type='birds'
-        )
-    
     def update(self, dt: float):
-        """
-        Update all scene systems.
-        
-        Args:
-            dt: Delta time in seconds
-        """
+        """Update all scene systems"""
         if self.player:
-            self.player.update(dt, self.environment_manager, self.slow_zone_manager)
-
-            # Determine grid cell and emit footstep when entering a new cell
-            curr_cell = self.world_to_grid(self.player.get_position())
-            last = getattr(self, '_last_player_cell', None)
-            if curr_cell != last:
+            # Smooth player update
+            old_pos = self.player.position
+            self.player.update(dt)
+            new_pos = self.player.position
+            
+            # Footstep sounds
+            curr_cell = self.world_to_grid(new_pos)
+            if curr_cell != self._last_player_cell:
                 self._last_player_cell = curr_cell
-                # Footstep sound selection
-                if tuple(curr_cell) in set(self.forest_zones):
-                    self.audio_system.play_footstep('grass')
-                else:
-                    self.audio_system.play_footstep('stone')
-                # Occasional bird chirp
-                if random.random() < 0.02:
-                    self.audio_system.play_bird_chirp()
-
+                self.audio_system.play_global_sound('footstep', volume=0.5)
+                
+                # Random bird chirps
+                if random.random() < 0.03:
+                    self.audio_system.play_global_sound('birds', volume=0.3)
+        
+        # Update other systems
         self.firefly_system.update(dt)
         self.audio_system.update(dt)
-
+        
+        # Update positional audio for player
         if self.player:
-            self.audio_system.update_positional_audio(self.player.get_position())
+            self.audio_system.update_positional_audio(self.player.position)
     
     def render(self):
         """Render entire scene"""
-        # Enable fog
-        self.fog_system.enable()
-        
-        # Render grid
-        self._render_grid()
-        
-        # Render obstacles (walls)
-        self._render_obstacles()
-        
-        # Render environment objects
+        self._render_floor()
         self.environment_manager.render_all()
         
-        # Disable fog for particle effects
-        self.fog_system.disable()
-        
-        # Render particles
-        self.firefly_system.render()
-        
-        # Debug rendering
         if self.debug_render:
             self.slow_zone_manager.render_zones()
+        
+        self.firefly_system.render()
+    
+    def _render_floor(self):
+        """Render detailed forest floor"""
+        half = self.grid_size / 2 * self.cell_size
+        
+        glDisable(GL_LIGHTING)
+        glColor3f(0.45, 0.35, 0.25)
+        
+        glBegin(GL_QUADS)
+        glNormal3f(0, 1, 0)
+        glVertex3f(-half, -0.15, -half)
+        glVertex3f(half, -0.15, -half)
+        glVertex3f(half, -0.15, half)
+        glVertex3f(-half, -0.15, half)
+        glEnd()
+        
+        glEnable(GL_LIGHTING)
+        glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, (0.2, 0.5, 0.2, 1.0))
+        
+        tile_size = 2.0
+        for x in range(int(-half), int(half), int(tile_size)):
+            for z in range(int(-half), int(half), int(tile_size)):
+                glBegin(GL_QUADS)
+                r = 0.2 + random.uniform(-0.05, 0.05)
+                g = 0.5 + random.uniform(-0.05, 0.05)
+                b = 0.2 + random.uniform(-0.05, 0.05)
+                glColor3f(r, g, b)
+                glNormal3f(0, 1, 0)
+                
+                y1 = random.uniform(0, 0.02)
+                y2 = random.uniform(0, 0.02)
+                y3 = random.uniform(0, 0.02)
+                y4 = random.uniform(0, 0.02)
+                
+                glVertex3f(x, y1, z)
+                glVertex3f(x + tile_size, y2, z)
+                glVertex3f(x + tile_size, y3, z + tile_size)
+                glVertex3f(x, y4, z + tile_size)
+                glEnd()
     
     def render_player(self):
-        """Render the player"""
+        """Render player with glow effect (standard 3D sphere)"""
         if not self.player:
             return
         
-        px, py, pz = self.player.get_position()
+        px, py, pz = self.player.position
         
         glPushMatrix()
-        glTranslatef(px - self.grid_size // 2, py, pz - self.grid_size // 2)
+        glTranslatef(px, py + 0.25, pz)
         
-        # Main solid sphere
         glEnable(GL_DEPTH_TEST)
         glDepthMask(GL_TRUE)
         glEnable(GL_LIGHTING)
@@ -273,159 +267,26 @@ class ForestScene:
         gluSphere(quad, 0.25, 24, 24)
         gluDeleteQuadric(quad)
         
-        # Glow effect
         glDisable(GL_LIGHTING)
         glDepthMask(GL_FALSE)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glColor4f(*self.player.color, 0.15)
+        glColor4f(*self.player.color, 0.2)
         
         quad_glow = gluNewQuadric()
-        gluSphere(quad_glow, 0.4, 16, 16)
+        gluSphere(quad_glow, 0.35, 16, 16)
         gluDeleteQuadric(quad_glow)
         
-        # Restore states
         glDepthMask(GL_TRUE)
         glEnable(GL_LIGHTING)
-        
         glPopMatrix()
     
-    def _render_grid(self):
-        """Render grid floor using 3DS model if available, else grass"""
-        grass_model = None
-        try:
-            from .environment_objects import get_grass_model
-            grass_model = get_grass_model()
-        except:
-            pass
-        
-        glDisable(GL_LIGHTING)
-        
-        if grass_model and hasattr(grass_model, 'meshes') and grass_model.meshes:
-            # Render grass using 3DS model
-            glEnable(GL_LIGHTING)
-            half = self.grid_size / 2 * self.cell_size
-            grass_model.render(0, -0.1, 0, scale=self.grid_size * 0.4)
-            glDisable(GL_LIGHTING)
-        else:
-            # Fallback to procedural grass
-            # Draw grass floor
-            glColor3f(0.2, 0.6, 0.2)  # Green grass color
-            half = self.grid_size / 2 * self.cell_size
-            
-            glBegin(GL_QUADS)
-            glVertex3f(-half, -0.01, -half)
-            glVertex3f(half, -0.01, -half)
-            glVertex3f(half, -0.01, half)
-            glVertex3f(-half, -0.01, half)
-            glEnd()
-
-            # Draw subtle grid lines (light gray)
-            glColor3f(0.15, 0.4, 0.15)  # Darker green for lines
-            glLineWidth(0.5)
-            glBegin(GL_LINES)
-            for i in range(-self.grid_size//2, self.grid_size//2 + 1):
-                x = i * self.cell_size
-                glVertex3f(x, 0, -half)
-                glVertex3f(x, 0, half)
-                glVertex3f(-half, 0, x)
-                glVertex3f(half, 0, x)
-            glEnd()
-
-            # Draw outer frame
-            glColor3f(0.1, 0.5, 0.1)  # Even darker green
-            glLineWidth(2.0)
-            glBegin(GL_LINE_LOOP)
-            glVertex3f(-half, 0, -half)
-            glVertex3f(half, 0, -half)
-            glVertex3f(half, 0, half)
-            glVertex3f(-half, 0, half)
-            glEnd()
-        
-        glEnable(GL_LIGHTING)
-    
-    def _render_obstacles(self):
-        """Render maze obstacles using 3DS tree models or procedural fallback"""
-        tree_model = None
-        try:
-            from .environment_objects import get_tree_model
-            tree_model = get_tree_model()
-        except:
-            pass
-        
-        glEnable(GL_LIGHTING)
-        
-        for y in range(self.grid_size):
-            for x in range(len(self.grid[0])):
-                if self.grid[y][x] == 1:  # Wall = Tree obstacle
-                    wx = (x - self.grid_size // 2) * self.cell_size
-                    wz = (y - self.grid_size // 2) * self.cell_size
-                    
-                    if tree_model and hasattr(tree_model, 'meshes') and tree_model.meshes:
-                        # Use 3DS model
-                        tree_model.render(wx, 0, wz, scale=1.0)
-                    else:
-                        # Fallback to procedural tree
-                        render_tree_at(wx, 0, wz, scale=1.0)
-    
-    def _draw_cube(self, size: float):
-        """Draw a cube"""
-        s = size / 2.0
-        
-        glBegin(GL_QUADS)
-        
-        # Front face
-        glNormal3f(0, 0, 1)
-        glVertex3f(-s, -s, s)
-        glVertex3f(s, -s, s)
-        glVertex3f(s, s, s)
-        glVertex3f(-s, s, s)
-        
-        # Back face
-        glNormal3f(0, 0, -1)
-        glVertex3f(-s, -s, -s)
-        glVertex3f(-s, s, -s)
-        glVertex3f(s, s, -s)
-        glVertex3f(s, -s, -s)
-        
-        # Top face
-        glNormal3f(0, 1, 0)
-        glVertex3f(-s, s, -s)
-        glVertex3f(-s, s, s)
-        glVertex3f(s, s, s)
-        glVertex3f(s, s, -s)
-        
-        # Bottom face
-        glNormal3f(0, -1, 0)
-        glVertex3f(-s, -s, -s)
-        glVertex3f(s, -s, -s)
-        glVertex3f(s, -s, s)
-        glVertex3f(-s, -s, s)
-        
-        # Right face
-        glNormal3f(1, 0, 0)
-        glVertex3f(s, -s, -s)
-        glVertex3f(s, s, -s)
-        glVertex3f(s, s, s)
-        glVertex3f(s, -s, s)
-        
-        # Left face
-        glNormal3f(-1, 0, 0)
-        glVertex3f(-s, -s, -s)
-        glVertex3f(-s, -s, s)
-        glVertex3f(-s, s, s)
-        glVertex3f(-s, s, -s)
-        
-        glEnd()
-    
     def set_debug_render(self, enabled: bool):
-        """Enable/disable debug rendering"""
         self.debug_render = enabled
     
     def get_maze_data(self) -> Dict:
-        """Get maze data for export"""
         return self.maze_generator.get_maze_data()
     
     def cleanup(self):
-        """Clean up resources"""
         self.audio_system.cleanup()
+        print("[SCENE] Cleanup complete")

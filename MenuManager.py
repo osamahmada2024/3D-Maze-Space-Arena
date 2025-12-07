@@ -1,7 +1,7 @@
 import pygame, sys, math
 
 class MenuManager:
-    def __init__(self):
+    def __init__(self, include_forest_maze: bool = True):
         pygame.init()
         self.WIDTH, self.HEIGHT = 800, 600
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
@@ -16,12 +16,16 @@ class MenuManager:
         self.YELLOW = (255, 220, 90)
         self.BLUE = (90, 170, 255)
 
+        # Maze mode selection
+        self.modes = ["Standard Maze", "Forest Maze"] if include_forest_maze else ["Standard Maze"]
+        self.selected_mode = None
+        
         self.agents = ["AC", "ACS", "Hybrid"]
         self.algorithms = ["A* search", "Dijkstra", "DFS", "BFS"]
         self.selected_agent = None
         self.selected_algo = None
         self.cursor_pos = 0
-        self.stage = 1
+        self.stage = 0  # 0: mode selection, 1: agent, 2: algorithm
         self.running = True
 
     def draw_animated_gradient(self, t):
@@ -44,7 +48,19 @@ class MenuManager:
         pygame.draw.circle(self.screen, color, (x, y), 8)
 
     def draw_menu(self, t):
-        if self.stage == 1:
+        if self.stage == 0:
+            title = self.FONT.render("Select Game Mode", True, self.WHITE)
+            self.screen.blit(title, (self.WIDTH//2 - title.get_width()//2, 50))
+
+            for i, item in enumerate(self.modes):
+                txt_color = self.YELLOW if self.selected_mode == item else self.WHITE
+                txt = self.FONT.render(item, True, txt_color)
+                y = 150 + i*70
+                self.screen.blit(txt, (200, y))
+                if i == self.cursor_pos:
+                    self.draw_cursor(170, y + 15, t)
+        
+        elif self.stage == 1:
             title = self.FONT.render("Select Agent", True, self.WHITE)
             self.screen.blit(title, (self.WIDTH//2 - title.get_width()//2, 50))
 
@@ -87,20 +103,30 @@ class MenuManager:
                         self.cursor_pos += 1
                     elif event.key == pygame.K_UP:
                         self.cursor_pos -= 1
-                    self.cursor_pos %= (3 if self.stage == 1 else 4)
+                    
+                    # Adjust modulo based on current stage
+                    if self.stage == 0:
+                        self.cursor_pos %= len(self.modes)
+                    elif self.stage == 1:
+                        self.cursor_pos %= len(self.agents)
+                    elif self.stage == 2:
+                        self.cursor_pos %= len(self.algorithms)
 
                     if event.key == pygame.K_RETURN:
-                        if self.stage == 1:
+                        if self.stage == 0:
+                            self.selected_mode = self.modes[self.cursor_pos]
+                            self.stage = 1
+                            self.cursor_pos = 0
+                        elif self.stage == 1:
                             self.selected_agent = self.agents[self.cursor_pos]
                             self.stage = 2
                             self.cursor_pos = 0
-                        else:
+                        elif self.stage == 2:
                             self.selected_algo = self.algorithms[self.cursor_pos]
-                            self.running = False  # Exit loop after selection
+                            self.running = False
 
             self.draw_menu(t)
             pygame.display.flip()
             self.clock.tick(60)
 
         pygame.quit()
-        # Removed sys.exit() to continue program execution

@@ -17,6 +17,14 @@ from CameraController import CameraController
 from PathfindingEngine import PathfindingEngine
 from EnvironmentRender import EnvironmentRender
 
+# Forest Maze imports
+try:
+    from forest_maze import ForestScene
+    FOREST_MAZE_AVAILABLE = True
+except ImportError:
+    FOREST_MAZE_AVAILABLE = False
+    print("Warning: forest_maze module not available")
+
 # Screen configuration
 WIDTH, HEIGHT = 1200, 800
 CELL_SIZE = 1.0
@@ -156,19 +164,29 @@ def draw_obstacles(grid):
                 glPopMatrix()
 
 def main():
-    # Run menu to select agent and algorithm
-    menu = MenuManager()
+    # Run menu to select game mode
+    menu = MenuManager(include_forest_maze=FOREST_MAZE_AVAILABLE)
     menu.run()
 
+    selected_mode = menu.selected_mode
     selected_agent = menu.selected_agent
     selected_algo = menu.selected_algo
 
-    if not selected_agent or not selected_algo:
+    if not selected_mode or not selected_agent or not selected_algo:
         print("No selection made. Exiting...")
         return
-
+    
+    print(f"Selected Mode: {selected_mode}")
     print(f"Selected Agent: {selected_agent}")
     print(f"Selected Algorithm: {selected_algo}")
+    
+    # Route to appropriate game mode
+    if selected_mode == "Forest Maze":
+        run_forest_maze(selected_agent, selected_algo)
+        return
+    
+    # Standard maze mode continues below
+    print("Starting Standard Maze mode...")
 
     # Initialize Pygame and OpenGL
     pygame.init()
@@ -343,6 +361,179 @@ def main():
         pygame.display.flip()
         clock.tick(60)
 
+    pygame.quit()
+    sys.exit()
+
+def run_forest_maze(selected_agent: str = None, selected_algo: str = 'A* search'):
+    """Run the Forest Maze game mode with enhanced audio and forest visuals"""
+    if not FOREST_MAZE_AVAILABLE:
+        print("Forest Maze module not available. Using standard maze instead.")
+        main()
+        return
+
+    print("[FOREST MAZE] Initializing enhanced forest experience...")
+
+    # Initialize Pygame with audio, but guard failures
+    try:
+        pygame.mixer.pre_init(frequency=22050, size=-16, channels=2, buffer=1024)
+        pygame.init()
+        try:
+            pygame.mixer.init()
+            audio_initialized = True
+        except Exception as e:
+            print(f"[AUDIO] pygame.mixer.init failed: {e}")
+            audio_initialized = False
+    except Exception as e:
+        print(f"[AUDIO] pygame init/pre_init failed: {e}")
+        audio_initialized = False
+        pygame.init()
+
+    screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.DOUBLEBUF | pygame.OPENGL)
+    pygame.display.set_caption("[Forest Maze] - The Ultimate Forest Experience")
+    clock = pygame.time.Clock()
+
+    init_opengl()
+
+    # Initialize enhanced forest scene
+    forest_scene = ForestScene(grid_size=25, cell_size=CELL_SIZE)
+
+    # IMPORTANT: disable path usage in forest mode (already default in ForestScene),
+    # but also avoid drawing path_renderer in the main loop below.
+    forest_scene.disable_path = True
+
+    # Initialize player
+    start = (1, 1)
+    goal = (23, 23)
+
+    # Map agent types to colors...
+    agent_colors = {
+        "AC": (1.0, 0.0, 0.0),      # Red
+        "ACS": (0.0, 1.0, 0.0),     # Green
+        "Hybrid": (0.0, 0.0, 1.0),  # Blue
+        "Default": (0.0, 1.0, 1.0)  # Cyan
+    }
+
+    agent_color = agent_colors.get(selected_agent, agent_colors["Default"])
+
+    # Map algorithm names
+    algo_map = {
+        "A* search": "astar",
+        "Dijkstra": "dijkstra",
+        "DFS": "dfs",
+        "BFS": "bfs"
+    }
+    algo_name = algo_map.get(selected_algo, selected_algo.lower() if selected_algo else 'astar')
+
+    print(f"Initializing player with algorithm: {algo_name}")
+
+    # Pass None for pathfinding_engine; forest_scene.initialize() will create it
+    player = forest_scene.initialize(None, start, goal, agent_color, algo=algo_name)
+
+    # Create path_renderer but DO NOT draw it in forest mode (we keep it for compatibility)
+    path_renderer = PathRender(cell_size=CELL_SIZE, grid_size=25)
+
+    # Camera setup
+    camera = CameraController(distance=18, angle_x=45, angle_y=30)
+
+    # Game loop
+    running = True
+    last_time = time.time()
+    print("[FOREST MAZE] Initialized successfully!")
+    print(f"Start: {start} | Goal: {goal}")
+    print("Controls:")
+    print("  ESC - Exit")
+    print("  Arrow keys - Rotate camera")
+    print("  Mouse wheel - Zoom")
+    print("Enjoy the immersive forest experience!")
+
+    fullscreen = False
+    muted = False
+
+    while running:
+        current_time = time.time()
+        dt = current_time - last_time
+        last_time = current_time
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+                elif event.key == pygame.K_d:
+                    forest_scene.set_debug_render(not forest_scene.debug_render)
+                    print(f"Debug rendering: {forest_scene.debug_render}")
+                elif event.key == pygame.K_m:
+                    # Toggle mute (works whether mixer active or not)
+                    muted = not muted
+                    try:
+                        if audio_initialized:
+                            pygame.mixer.music.set_volume(0.0 if muted else 0.7)
+                        print(f"Audio {'muted' if muted else 'unmuted'}")
+                    except Exception as e:
+                        print(f"[AUDIO] mute toggle failed: {e}")
+                elif event.key == pygame.K_f:
+                    fullscreen = not fullscreen
+                    if fullscreen:
+                        screen = pygame.display.set_mode((WIDTH, HEIGHT),
+                                                         pygame.DOUBLEBUF | pygame.OPENGL | pygame.FULLSCREEN)
+                    else:
+                        screen = pygame.display.set_mode((WIDTH, HEIGHT),
+                                                         pygame.DOUBLEBUF | pygame.OPENGL)
+                    print(f"Fullscreen: {fullscreen}")
+            elif event.type == pygame.MOUSEWHEEL:
+                camera.distance -= event.y * 2
+                camera.distance = max(8, min(50, camera.distance))
+
+        # Camera control
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT]:
+            camera.angle_x -= 50 * dt
+        if keys[pygame.K_RIGHT]:
+            camera.angle_x += 50 * dt
+        if keys[pygame.K_UP]:
+            camera.angle_y += 50 * dt
+        if keys[pygame.K_DOWN]:
+            camera.angle_y -= 50 * dt
+        camera.angle_y = max(-89, min(89, camera.angle_y))
+
+        # Update forest scene systems
+        forest_scene.update(dt)
+
+        # Update camera target to follow player
+        camera.target = list(player.position) if player else [0, 0, 0]
+
+        # Rendering
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        setup_view(camera)
+
+        # Render scene (trees, particles; fog removed already)
+        forest_scene.render()
+
+        # Render path and history only if path is enabled for forest (we keep it off)
+        if not getattr(forest_scene, 'disable_path', True):
+            glDisable(GL_LIGHTING)
+            try:
+                path_renderer.draw_path(player)
+                path_renderer.draw_history(player)
+            except Exception:
+                pass
+            glEnable(GL_LIGHTING)
+
+        # Render player
+        forest_scene.render_player()
+
+        # Victory
+        if player and getattr(player, 'arrived', False):
+            if not hasattr(player, '_victory_printed'):
+                print("CONGRATULATIONS!")
+                player._victory_printed = True
+
+        pygame.display.flip()
+        clock.tick(60)
+
+    # Cleanup
+    forest_scene.cleanup()
     pygame.quit()
     sys.exit()
 

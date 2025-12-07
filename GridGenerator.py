@@ -1,37 +1,28 @@
-
 import random
 from typing import List, Tuple, Set
 
 class GridGenerator:
     """
-    **Role:** Produce a complete 2D grid environment. No external dependencies.
+    Role: Produce a complete 2D grid environment. 
     
-    Creates a matrix representing free cells and obstacles with uniform obstacle probability,
-    ensuring there's ALWAYS a guaranteed path from (0,0) to (grid_size-1, grid_size-1).
+    Generates a matrix with: 0 = free cell (normal), 1 = obstacle (Ice Block), 2 = slippery cell
     """
     
-    def __init__(self, grid_size: int, obstacle_prob: float):
-        """
-        Initialize the GridGenerator.
-        
-        Args:
-            grid_size (int): The size of the grid (grid_size x grid_size)
-            obstacle_prob (float): Probability of a cell being an obstacle (0.0 to 1.0)
-        """
+    def _init_(self, grid_size: int, obstacle_prob: float):
         self.grid_size: int = grid_size
         self.obstacle_prob: float = obstacle_prob
         self.grid: List[List[int]] = []
+        # Constants for clarity
+        self.CELL_FREE = 0
+        self.CELL_OBSTACLE = 1
+        self.CELL_SLIPPERY = 2
     
     def generate(self) -> List[List[int]]:
         """
-        Generate a 2D grid with obstacles placed according to obstacle_prob,
-        while ensuring a valid path exists from (0,0) to (grid_size-1, grid_size-1).
-        
-        Returns:
-            List[List[int]]: 2D grid where 0 = free cell, 1 = obstacle
+        Generate a 2D grid with obstacles and slippery zones.
         """
         # Initialize empty grid (all free)
-        self.grid = [[0 for _ in range(self.grid_size)] for _ in range(self.grid_size)]
+        self.grid = [[self.CELL_FREE for _ in range(self.grid_size)] for _ in range(self.grid_size)]
         
         # Generate PRIMARY guaranteed path (simple and direct)
         primary_path = self._generate_simple_path()
@@ -46,20 +37,33 @@ class GridGenerator:
         # Combine all protected cells
         protected_cells: Set[Tuple[int, int]] = set(primary_path)
         for alt_path in alternative_paths:
+            # Protect path cells
             protected_cells.update(alt_path)
+            # Protect a safe zone around the path
+            for cell in alt_path:
+                protected_cells.update(self._get_safe_zone(cell, radius=1))
         
-        # Also protect a small area around start and goal
-        protected_cells.update(self._get_safe_zone((0, 0), radius=1))
-        protected_cells.update(self._get_safe_zone((self.grid_size-1, self.grid_size-1), radius=1))
-        
-        # Fill remaining cells with obstacles according to obstacle_prob
+        # 1. Fill grid with obstacles (1) - Ice Blocks
         for y in range(self.grid_size):
             for x in range(self.grid_size):
-                # Don't place obstacles on protected path cells
                 if (x, y) not in protected_cells:
-                    if random.random() < self.obstacle_prob:
-                        self.grid[y][x] = 1
+                    val = self.CELL_OBSTACLE if random.random() < self.obstacle_prob else self.CELL_FREE
+                    self.grid[y][x] = val
         
+        # 2. Add Slippery Zones (2) - Ultra-Slippery
+        SLIPPERY_PROB = 0.15 # 15% of free cells become slippery
+        for y in range(self.grid_size):
+            for x in range(self.grid_size):
+                # If the cell is free (0) and we have a chance to add a slippery floor
+                if self.grid[y][x] == self.CELL_FREE and random.random() < SLIPPERY_PROB:
+                    # Ensure it's not the start or goal point
+                    if (x, y) != (0, 0) and (x, y) != (self.grid_size - 1, self.grid_size - 1):
+                        self.grid[y][x] = self.CELL_SLIPPERY 
+                        
+        # Ensure Start (0,0) and Goal (N-1, N-1) are always normal free cells (0)
+        self.grid[0][0] = self.CELL_FREE
+        self.grid[self.grid_size - 1][self.grid_size - 1] = self.CELL_FREE
+                    
         return self.grid
     
     def _generate_simple_path(self) -> List[Tuple[int, int]]:
@@ -180,12 +184,16 @@ class GridGenerator:
         
         return safe_zone
     
-    def __str__(self) -> str:
+    def _str_(self) -> str:
         """String representation of the grid for visualization."""
         if not self.grid:
             return "Grid not generated yet"
         
         result = []
         for row in self.grid:
-            result.append(' '.join(['■' if cell == 1 else '□' for cell in row]))
+            result.append(' '.join([
+                '□' if cell == self.CELL_FREE else 
+                '■' if cell == self.CELL_OBSTACLE else 
+                '~' for cell in row  # Assuming ~ for slippery
+            ]))
         return '\n'.join(result)

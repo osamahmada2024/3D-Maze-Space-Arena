@@ -1,70 +1,26 @@
-
 import random
 from typing import List, Tuple, Set
 
+
 class GridGenerator:
     """
-    **Role:** Produce a complete 2D grid environment. No external dependencies.
-    
-    Creates a matrix representing free cells and obstacles with uniform obstacle probability,
-    ensuring there's ALWAYS a guaranteed path from (0,0) to (grid_size-1, grid_size-1).
+    Produce a 2D grid environment with obstacles and optional slippery cells.
+
+    Cells:
+      - 0: free
+      - 1: obstacle
+      - 2: slippery
     """
-    
-    def __init__(self, grid_size: int, obstacle_prob: float):
-        """
-        Initialize the GridGenerator.
-        
-        Args:
-            grid_size (int): The size of the grid (grid_size x grid_size)
-            obstacle_prob (float): Probability of a cell being an obstacle (0.0 to 1.0)
-        """
+
+    def __init__(self, grid_size: int, obstacle_prob: float) -> None:
         self.grid_size: int = grid_size
         self.obstacle_prob: float = obstacle_prob
         self.grid: List[List[int]] = []
-    
-    def generate(self) -> List[List[int]]:
+
+        # Constants
+        self.CELL_FREE = 0
+        self.CELL_OBSTACLE = 1
         """
-        Generate a 2D grid with obstacles placed according to obstacle_prob,
-        while ensuring a valid path exists from (0,0) to (grid_size-1, grid_size-1).
-        
-        Returns:
-            List[List[int]]: 2D grid where 0 = free cell, 1 = obstacle
-        """
-        # Initialize empty grid (all free)
-        self.grid = [[0 for _ in range(self.grid_size)] for _ in range(self.grid_size)]
-        
-        # Generate PRIMARY guaranteed path (simple and direct)
-        primary_path = self._generate_simple_path()
-        
-        # Generate 1-2 additional alternative paths for variety
-        num_alt_paths = random.randint(1, 2)
-        alternative_paths = []
-        for _ in range(num_alt_paths):
-            alt_path = self._generate_random_walk_path()
-            alternative_paths.append(alt_path)
-        
-        # Combine all protected cells
-        protected_cells: Set[Tuple[int, int]] = set(primary_path)
-        for alt_path in alternative_paths:
-            protected_cells.update(alt_path)
-        
-        # Also protect a small area around start and goal
-        protected_cells.update(self._get_safe_zone((0, 0), radius=1))
-        protected_cells.update(self._get_safe_zone((self.grid_size-1, self.grid_size-1), radius=1))
-        
-        # Fill remaining cells with obstacles according to obstacle_prob
-        for y in range(self.grid_size):
-            for x in range(self.grid_size):
-                # Don't place obstacles on protected path cells
-                if (x, y) not in protected_cells:
-                    if random.random() < self.obstacle_prob:
-                        self.grid[y][x] = 1
-        
-        return self.grid
-    
-    def _generate_simple_path(self) -> List[Tuple[int, int]]:
-        """
-        Generate a SIMPLE guaranteed path from (0,0) to (grid_size-1, grid_size-1).
         This path only moves RIGHT or DOWN, ensuring it ALWAYS reaches the goal.
         
         Returns:
@@ -72,120 +28,147 @@ class GridGenerator:
         """
         x, y = 0, 0
         target_x, target_y = self.grid_size - 1, self.grid_size - 1
-        path = [(x, y)]
-        
-        # Move right and down only (guaranteed to reach target)
-        while x < target_x or y < target_y:
-            if x < target_x and y < target_y:
-                # Both directions available - choose randomly
-                if random.random() < 0.5:
-                    x += 1
-                else:
-                    y += 1
-            elif x < target_x:
-                # Can only move right
-                x += 1
-            else:
-                # Can only move down
-                y += 1
-            
-            path.append((x, y))
-        
-        return path
-    
-    def _generate_random_walk_path(self) -> List[Tuple[int, int]]:
-        """
-        Generate a random walk path that eventually reaches the goal.
-        Can move in all 4 directions, but biased towards the goal.
-        
-        Returns:
-            List[Tuple[int, int]]: List of (x, y) coordinates forming the path
-        """
-        x, y = 0, 0
-        target_x, target_y = self.grid_size - 1, self.grid_size - 1
-        path = [(x, y)]
-        visited = {(x, y)}
-        
-        max_steps = self.grid_size * self.grid_size  # Prevent infinite loops
-        steps = 0
-        
-        while (x != target_x or y != target_y) and steps < max_steps:
-            # Calculate direction to goal
-            dx = 1 if x < target_x else (-1 if x > target_x else 0)
-            dy = 1 if y < target_y else (-1 if y > target_y else 0)
-            
-            # Possible moves (4-directional)
-            possible_moves = []
-            
-            # Bias towards goal (70% chance)
-            if random.random() < 0.7:
-                if dx != 0:
-                    nx, ny = x + dx, y
-                    if 0 <= nx < self.grid_size and 0 <= ny < self.grid_size:
-                        possible_moves.append((nx, ny))
-                
-                if dy != 0:
-                    nx, ny = x, y + dy
-                    if 0 <= nx < self.grid_size and 0 <= ny < self.grid_size:
-                        possible_moves.append((nx, ny))
-            
-            # Also consider other directions (for variety)
-            for move_dx, move_dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
-                nx, ny = x + move_dx, y + move_dy
-                if 0 <= nx < self.grid_size and 0 <= ny < self.grid_size:
-                    if (nx, ny) not in visited:
-                        possible_moves.append((nx, ny))
-            
-            if possible_moves:
-                x, y = random.choice(possible_moves)
-                path.append((x, y))
-                visited.add((x, y))
-            else:
-                # If stuck, move towards goal directly
-                if x < target_x:
-                    x += 1
-                elif x > target_x:
-                    x -= 1
-                elif y < target_y:
-                    y += 1
-                elif y > target_y:
-                    y -= 1
-                
-                path.append((x, y))
-                visited.add((x, y))
-            
-            steps += 1
-        
-        return path
-    
-    def _get_safe_zone(self, center: Tuple[int, int], radius: int = 1) -> Set[Tuple[int, int]]:
-        """
-        Get all cells within a radius around a center point.
-        
-        Args:
-            center: (x, y) center coordinate
-            radius: radius around center
-            
-        Returns:
-            Set of (x, y) coordinates in the safe zone
-        """
-        cx, cy = center
-        safe_zone = set()
-        
-        for dx in range(-radius, radius + 1):
-            for dy in range(-radius, radius + 1):
-                x, y = cx + dx, cy + dy
-                if 0 <= x < self.grid_size and 0 <= y < self.grid_size:
-                    safe_zone.add((x, y))
-        
-        return safe_zone
-    
-    def __str__(self) -> str:
-        """String representation of the grid for visualization."""
-        if not self.grid:
-            return "Grid not generated yet"
-        
-        result = []
-        for row in self.grid:
-            result.append(' '.join(['■' if cell == 1 else '□' for cell in row]))
-        return '\n'.join(result)
+        import random
+        from typing import List, Tuple, Set
+
+        class GridGenerator:
+            """
+            Produce a 2D grid environment with obstacles and optional slippery cells.
+
+            Cells:
+              - 0: free
+              - 1: obstacle
+              - 2: slippery
+            """
+
+            def __init__(self, grid_size: int, obstacle_prob: float) -> None:
+                self.grid_size: int = grid_size
+                self.obstacle_prob: float = obstacle_prob
+                self.grid: List[List[int]] = []
+
+                # Constants
+                self.CELL_FREE = 0
+                self.CELL_OBSTACLE = 1
+                self.CELL_SLIPPERY = 2
+
+            def generate(self) -> List[List[int]]:
+                """Generate the grid, guaranteeing at least one path from start to goal."""
+                # Start with all free
+                self.grid = [[self.CELL_FREE for _ in range(self.grid_size)] for _ in range(self.grid_size)]
+
+                # Primary guaranteed path and some alternatives
+                primary_path = self._generate_simple_path()
+                num_alt_paths = random.randint(1, 2)
+                alternative_paths = [self._generate_random_walk_path() for _ in range(num_alt_paths)]
+
+                # Protected cells (do not place obstacles here)
+                protected_cells: Set[Tuple[int, int]] = set(primary_path)
+                for alt in alternative_paths:
+                    protected_cells.update(alt)
+                    for cell in alt:
+                        protected_cells.update(self._get_safe_zone(cell, radius=1))
+
+                # Also protect small zones around start and goal
+                protected_cells.update(self._get_safe_zone((0, 0), radius=1))
+                protected_cells.update(self._get_safe_zone((self.grid_size - 1, self.grid_size - 1), radius=1))
+
+                # Fill obstacles
+                for y in range(self.grid_size):
+                    for x in range(self.grid_size):
+                        if (x, y) not in protected_cells and random.random() < self.obstacle_prob:
+                            self.grid[y][x] = self.CELL_OBSTACLE
+
+                # Add slippery zones on some remaining free cells (but not on protected path)
+                SLIPPERY_PROB = 0.15
+                for y in range(self.grid_size):
+                    for x in range(self.grid_size):
+                        if self.grid[y][x] == self.CELL_FREE and (x, y) not in protected_cells:
+                            if random.random() < SLIPPERY_PROB:
+                                # avoid start/goal
+                                if (x, y) not in [(0, 0), (self.grid_size - 1, self.grid_size - 1)]:
+                                    self.grid[y][x] = self.CELL_SLIPPERY
+
+                # Ensure start and goal are free
+                self.grid[0][0] = self.CELL_FREE
+                self.grid[self.grid_size - 1][self.grid_size - 1] = self.CELL_FREE
+
+                return self.grid
+
+            def _generate_simple_path(self) -> List[Tuple[int, int]]:
+                x, y = 0, 0
+                tx, ty = self.grid_size - 1, self.grid_size - 1
+                path = [(x, y)]
+                while x < tx or y < ty:
+                    if x < tx and y < ty:
+                        if random.random() < 0.5:
+                            x += 1
+                        else:
+                            y += 1
+                    elif x < tx:
+                        x += 1
+                    else:
+                        y += 1
+                    path.append((x, y))
+                return path
+
+            def _generate_random_walk_path(self) -> List[Tuple[int, int]]:
+                x, y = 0, 0
+                tx, ty = self.grid_size - 1, self.grid_size - 1
+                path = [(x, y)]
+                visited = {(x, y)}
+                max_steps = self.grid_size * self.grid_size
+                steps = 0
+                while (x != tx or y != ty) and steps < max_steps:
+                    dx = 1 if x < tx else (-1 if x > tx else 0)
+                    dy = 1 if y < ty else (-1 if y > ty else 0)
+                    possible_moves = []
+                    if random.random() < 0.7:
+                        if dx != 0:
+                            nx, ny = x + dx, y
+                            if 0 <= nx < self.grid_size and 0 <= ny < self.grid_size:
+                                possible_moves.append((nx, ny))
+                        if dy != 0:
+                            nx, ny = x, y + dy
+                            if 0 <= nx < self.grid_size and 0 <= ny < self.grid_size:
+                                possible_moves.append((nx, ny))
+                    for mdx, mdy in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+                        nx, ny = x + mdx, y + mdy
+                        if 0 <= nx < self.grid_size and 0 <= ny < self.grid_size and (nx, ny) not in visited:
+                            possible_moves.append((nx, ny))
+                    if possible_moves:
+                        x, y = random.choice(possible_moves)
+                    else:
+                        if x < tx:
+                            x += 1
+                        elif x > tx:
+                            x -= 1
+                        elif y < ty:
+                            y += 1
+                        elif y > ty:
+                            y -= 1
+                    path.append((x, y))
+                    visited.add((x, y))
+                    steps += 1
+                return path
+
+            def _get_safe_zone(self, center: Tuple[int, int], radius: int = 1) -> Set[Tuple[int, int]]:
+                cx, cy = center
+                safe_zone: Set[Tuple[int, int]] = set()
+                for dx in range(-radius, radius + 1):
+                    for dy in range(-radius, radius + 1):
+                        x, y = cx + dx, cy + dy
+                        if 0 <= x < self.grid_size and 0 <= y < self.grid_size:
+                            safe_zone.add((x, y))
+                return safe_zone
+
+            def __str__(self) -> str:
+                if not self.grid:
+                    return "Grid not generated yet"
+                result = []
+                for row in self.grid:
+                    result.append(' '.join([
+                        '□' if cell == self.CELL_FREE else
+                        '■' if cell == self.CELL_OBSTACLE else
+                        '~' for cell in row
+                    ]))
+                return '\n'.join(result)

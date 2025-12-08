@@ -1,20 +1,24 @@
+"""
+app.py - Main Ice Maze Application (Enhanced)
+3D Ice Maze with multiple agent shapes and pathfinding algorithms
+"""
+
 import sys
 import time
-import math
 import pygame
-import random
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
 # Import from organized packages
 from core.Agent import Agent
-from core.GridGenerator import GridGenerator
-from core.PathfindingEngine import PathfindingEngine
+from ui.MenuManager import MenuManager
 from rendering.PathRender import PathRender
 from rendering.GoalRender import GoalRender
-from rendering.ParticleSystem import ParticleSystem
-from ui.MenuManager import MenuManager
+from core.GridGenerator import GridGenerator
+from rendering.AgentRender import AgentRender
 from ui.CameraController import CameraController
+from rendering.ParticleSystem import ParticleSystem
+from core.PathfindingEngine import PathfindingEngine
 
 # Configuration
 WIDTH, HEIGHT = 1200, 800
@@ -28,11 +32,10 @@ CELL_SLIPPERY = 2
 
 
 def draw_cube(size):
-    """Draw a cube."""
+    """Draw a cube for obstacles."""
     s = size / 2.0
     glBegin(GL_QUADS)
     
-    # All 6 faces
     faces = [
         ([0,0,1], [(-s,-s,s), (s,-s,s), (s,s,s), (-s,s,s)]),
         ([0,0,-1], [(-s,-s,-s), (-s,s,-s), (s,s,-s), (s,-s,-s)]),
@@ -151,22 +154,23 @@ def draw_obstacles(grid):
 
 def main():
     """Main application."""
-    print("="*60)
-    print("🎮 3D Maze Arena - Ice Maze")
-    print("="*60)
+    print("="*70)
+    print("🎮 3D Maze Arena - Ice Maze (Enhanced)")
+    print("="*70)
     
-    # Menu
+    # Menu - Now with agent shape selection
     menu = MenuManager()
     menu.run()
     
-    selected_agent = menu.selected_agent
+    selected_agent_shape = menu.selected_agent
     selected_algo = menu.selected_algo
     
-    if not selected_agent or not selected_algo:
+    if not selected_agent_shape or not selected_algo:
         print("No selection made. Exiting...")
         return
     
-    print(f"Agent: {selected_agent}, Algorithm: {selected_algo}")
+    print(f"✅ Agent Shape: {selected_agent_shape}")
+    print(f"✅ Algorithm: {selected_algo}")
     
     # Initialize Pygame and OpenGL
     pygame.init()
@@ -187,26 +191,39 @@ def main():
     path = pathfinder.find_path(start, goal, selected_algo)
     
     if not path:
-        print("No path found!")
+        print("❌ No path found!")
         return
     
-    # Create agent
-    speed_map = {"AC": 1.5, "ACS": 2.5, "Hybrid": 3.0}
-    color_map = {"AC": (1,0,0), "ACS": (0,1,0), "Hybrid": (0,0,1)}
+    print(f"✅ Path found: {len(path)} steps")
+    
+    # Create agent - Color based on shape
+    color_map = {
+        "sphere_droid": (0.0, 1.0, 1.0),    # Cyan
+        "robo_cube": (1.0, 0.5, 0.0),       # Orange
+        "mini_drone": (0.0, 1.0, 0.5),      # Green-cyan
+        "crystal_alien": (1.0, 0.0, 1.0)    # Magenta
+    }
     
     agent = Agent(
         start, goal, path,
-        speed_map.get(selected_agent, 2.0),
-        color_map.get(selected_agent, (1,1,1)),
-        grid
+        speed=2.0,
+        color=color_map.get(selected_agent_shape, (1.0, 1.0, 1.0)),
+        grid=grid
     )
     
     # Rendering systems
+    agent_renderer = AgentRender(cell_size=CELL_SIZE, grid_size=GRID_SIZE)
     camera = CameraController(distance=20, angle_x=45, angle_y=60)
     goal_renderer = GoalRender(cellSize=CELL_SIZE, grid_size=GRID_SIZE)
     path_renderer = PathRender(cell_size=CELL_SIZE, grid_size=GRID_SIZE)
     particles = ParticleSystem()
     
+    print("\n" + "="*70)
+    print("🎮 Controls:")
+    print("  Arrow Keys  - Rotate camera")
+    print("  Mouse Wheel - Zoom")
+    print("  ESC         - Exit")
+    print("="*70 + "\n")
     print("✅ Game ready!")
     
     # Main loop
@@ -218,6 +235,7 @@ def main():
         dt = current_time - last_time
         last_time = current_time
         
+        # Events
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -227,6 +245,7 @@ def main():
             elif event.type == pygame.MOUSEWHEEL:
                 camera.zoom(-event.y * 2)
         
+        # Camera controls
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT]:
             camera.rotate(-60 * dt, 0)
@@ -237,58 +256,51 @@ def main():
         if keys[pygame.K_DOWN]:
             camera.rotate(0, -30 * dt)
         
+        # Update
         agent.update(dt)
         camera.follow_target(agent.position)
         particles.update(dt)
         
+        # Rendering
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         setup_view(camera)
         
         draw_floor(GRID_SIZE, grid)
         draw_obstacles(grid)
         
+        # Draw path
         glDisable(GL_LIGHTING)
         path_renderer.draw_history(agent)
         path_renderer.draw_path(agent)
         glEnable(GL_LIGHTING)
         
+        # Draw goal
         if not agent.arrived:
             goal_renderer.draw_goal(agent)
         
-        # Draw agent
-        agent_x = agent.position[0] - GRID_SIZE//2
-        agent_z = agent.position[2] - GRID_SIZE//2
-        
-        glPushMatrix()
-        glTranslatef(agent_x, 0.3, agent_z)
-        glEnable(GL_LIGHTING)
-        glColor3f(*agent.color)
-        
-        quad = gluNewQuadric()
-        gluQuadricNormals(quad, GLU_SMOOTH)
-        gluSphere(quad, 0.25, 24, 24)
-        gluDeleteQuadric(quad)
-        
-        glDisable(GL_LIGHTING)
-        glDepthMask(GL_FALSE)
-        glColor4f(*agent.color, 0.15)
-        quad_glow = gluNewQuadric()
-        gluSphere(quad_glow, 0.4, 16, 16)
-        gluDeleteQuadric(quad_glow)
-        glDepthMask(GL_TRUE)
-        glPopMatrix()
+        # Draw agent with selected shape
+        agent_renderer.draw_agent(agent, shape_type=selected_agent_shape)
         
         pygame.display.flip()
         clock.tick(60)
         
+        # Victory check
         if agent.arrived:
-            print("🎉 Goal reached!")
+            print("\n" + "="*70)
+            print("🎉 VICTORY! You reached the goal!")
+            print("="*70)
             time.sleep(2)
             running = False
     
     pygame.quit()
-    print("✅ Game closed")
+    print("\n✅ Game closed successfully")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"\n❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        pygame.quit()

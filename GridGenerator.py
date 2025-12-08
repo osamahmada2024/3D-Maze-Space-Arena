@@ -1,37 +1,174 @@
+import random
+from typing import List, Tuple, Set import List, Tuple, Set
 
+
+class GridGenerator:
+    """
+    Produce a 2D grid environment with obstacles and optional slippery cells.
+
+    Cells:
+      - 0: free
+      - 1: obstacle
+      - 2: slippery
+    """
+
+    def __init__(self, grid_size: int, obstacle_prob: float) -> None:
+        self.grid_size: int = grid_size
+        self.obstacle_prob: float = obstacle_prob
+        self.grid: List[List[int]] = []
+
+        # Constants
+        self.CELL_FREE = 0
+        self.CELL_OBSTACLE = 1
+        self.CELL_SLIPPERY = 2
+
+    def generate(self) -> List[List[int]]:
+        """Generate the grid, guaranteeing at least one path from start to goal."""
+        # Start with all free
+        self.grid = [[self.CELL_FREE for _ in range(self.grid_size)] for _ in range(self.grid_size)]
+
+        # Primary guaranteed path and some alternatives
+        primary_path = self._generate_simple_path()
+        num_alt_paths = random.randint(1, 2)
+        alternative_paths = [self._generate_random_walk_path() for _ in range(num_alt_paths)]
+
+        # Protected cells (do not place obstacles here)
+        protected_cells: Set[Tuple[int, int]] = set(primary_path)
+        for alt in alternative_paths:
+            protected_cells.update(alt)
+            for cell in alt:
+                protected_cells.update(self._get_safe_zone(cell, radius=1))
+
+        # Also protect small zones around start and goal
+        protected_cells.update(self._get_safe_zone((0, 0), radius=1))
+        protected_cells.update(self._get_safe_zone((self.grid_size - 1, self.grid_size - 1), radius=1))
+
+        # Fill obstacles
+        for y in range(self.grid_size):
+            for x in range(self.grid_size):
+                if (x, y) not in protected_cells and random.random() < self.obstacle_prob:
+                    self.grid[y][x] = self.CELL_OBSTACLE
+
+        # Add slippery zones on some remaining free cells (but not on protected path)
+        SLIPPERY_PROB = 0.15
+        for y in range(self.grid_size):
+            for x in range(self.grid_size):
+                if self.grid[y][x] == self.CELL_FREE and (x, y) not in protected_cells:
+                    if random.random() < SLIPPERY_PROB:
+                        # avoid start/goal
+                        if (x, y) not in [(0, 0), (self.grid_size - 1, self.grid_size - 1)]:
+                            self.grid[y][x] = self.CELL_SLIPPERY
+
+        # Ensure start and goal are free
+        self.grid[0][0] = self.CELL_FREE
+        self.grid[self.grid_size - 1][self.grid_size - 1] = self.CELL_FREE
+
+        return self.grid
+
+    def _generate_simple_path(self) -> List[Tuple[int, int]]:
+        x, y = 0, 0
+        tx, ty = self.grid_size - 1, self.grid_size - 1
+        path = [(x, y)]
+        while x < tx or y < ty:
+            if x < tx and y < ty:
+                if random.random() < 0.5:
+                    x += 1
+                else:
+                    y += 1
+            elif x < tx:
+                x += 1
+            else:
+                y += 1
+            path.append((x, y))
+        return path
+
+    def _generate_random_walk_path(self) -> List[Tuple[int, int]]:
+        x, y = 0, 0
+        tx, ty = self.grid_size - 1, self.grid_size - 1
+        path = [(x, y)]
+        visited = {(x, y)}
+        max_steps = self.grid_size * self.grid_size
+        steps = 0
+        while (x != tx or y != ty) and steps < max_steps:
+            dx = 1 if x < tx else (-1 if x > tx else 0)
+            dy = 1 if y < ty else (-1 if y > ty else 0)
+            possible_moves = []
+            if random.random() < 0.7:
+                if dx != 0:
+                    nx, ny = x + dx, y
+                    if 0 <= nx < self.grid_size and 0 <= ny < self.grid_size:
+                        possible_moves.append((nx, ny))
+                if dy != 0:
+                    nx, ny = x, y + dy
+                    if 0 <= nx < self.grid_size and 0 <= ny < self.grid_size:
+                        possible_moves.append((nx, ny))
+            for mdx, mdy in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+                nx, ny = x + mdx, y + mdy
+                if 0 <= nx < self.grid_size and 0 <= ny < self.grid_size and (nx, ny) not in visited:
+                    possible_moves.append((nx, ny))
+            if possible_moves:
+                x, y = random.choice(possible_moves)
+            else:
+                if x < tx:
+                    x += 1
+                elif x > tx:
+                    x -= 1
+                elif y < ty:
+                    y += 1
+                elif y > ty:
+                    y -= 1
+            path.append((x, y))
+            visited.add((x, y))
+            steps += 1
+        return path
+
+    def _get_safe_zone(self, center: Tuple[int, int], radius: int = 1) -> Set[Tuple[int, int]]:
+        cx, cy = center
+        safe_zone: Set[Tuple[int, int]] = set()
+        for dx in range(-radius, radius + 1):
+            for dy in range(-radius, radius + 1):
+                x, y = cx + dx, cy + dy
+                if 0 <= x < self.grid_size and 0 <= y < self.grid_size:
+                    safe_zone.add((x, y))
+        return safe_zone
+
+    def __str__(self) -> str:
+        if not self.grid:
+            return "Grid not generated yet"
+        result = []
+        for row in self.grid:
+            result.append(' '.join([
+                '□' if cell == self.CELL_FREE else
+                '■' if cell == self.CELL_OBSTACLE else
+                '~' for cell in row
+            ]))
+        return '\n'.join(result)
+=======
 import random
 from typing import List, Tuple, Set
 
 class GridGenerator:
     """
-    **Role:** Produce a complete 2D grid environment. No external dependencies.
+    Role: Produce a complete 2D grid environment. 
     
-    Creates a matrix representing free cells and obstacles with uniform obstacle probability,
-    ensuring there's ALWAYS a guaranteed path from (0,0) to (grid_size-1, grid_size-1).
+    Generates a matrix with: 0 = free cell (normal), 1 = obstacle (Ice Block), 2 = slippery cell
     """
     
-    def __init__(self, grid_size: int, obstacle_prob: float):
-        """
-        Initialize the GridGenerator.
-        
-        Args:
-            grid_size (int): The size of the grid (grid_size x grid_size)
-            obstacle_prob (float): Probability of a cell being an obstacle (0.0 to 1.0)
-        """
+    def _init_(self, grid_size: int, obstacle_prob: float):
         self.grid_size: int = grid_size
         self.obstacle_prob: float = obstacle_prob
         self.grid: List[List[int]] = []
+        # Constants for clarity
+        self.CELL_FREE = 0
+        self.CELL_OBSTACLE = 1
+        self.CELL_SLIPPERY = 2
     
     def generate(self) -> List[List[int]]:
         """
-        Generate a 2D grid with obstacles placed according to obstacle_prob,
-        while ensuring a valid path exists from (0,0) to (grid_size-1, grid_size-1).
-        
-        Returns:
-            List[List[int]]: 2D grid where 0 = free cell, 1 = obstacle
+        Generate a 2D grid with obstacles and slippery zones.
         """
         # Initialize empty grid (all free)
-        self.grid = [[0 for _ in range(self.grid_size)] for _ in range(self.grid_size)]
+        self.grid = [[self.CELL_FREE for _ in range(self.grid_size)] for _ in range(self.grid_size)]
         
         # Generate PRIMARY guaranteed path (simple and direct)
         primary_path = self._generate_simple_path()
@@ -46,20 +183,33 @@ class GridGenerator:
         # Combine all protected cells
         protected_cells: Set[Tuple[int, int]] = set(primary_path)
         for alt_path in alternative_paths:
+            # Protect path cells
             protected_cells.update(alt_path)
+            # Protect a safe zone around the path
+            for cell in alt_path:
+                protected_cells.update(self._get_safe_zone(cell, radius=1))
         
-        # Also protect a small area around start and goal
-        protected_cells.update(self._get_safe_zone((0, 0), radius=1))
-        protected_cells.update(self._get_safe_zone((self.grid_size-1, self.grid_size-1), radius=1))
-        
-        # Fill remaining cells with obstacles according to obstacle_prob
+        # 1. Fill grid with obstacles (1) - Ice Blocks
         for y in range(self.grid_size):
             for x in range(self.grid_size):
-                # Don't place obstacles on protected path cells
                 if (x, y) not in protected_cells:
-                    if random.random() < self.obstacle_prob:
-                        self.grid[y][x] = 1
+                    val = self.CELL_OBSTACLE if random.random() < self.obstacle_prob else self.CELL_FREE
+                    self.grid[y][x] = val
         
+        # 2. Add Slippery Zones (2) - Ultra-Slippery
+        SLIPPERY_PROB = 0.15 # 15% of free cells become slippery
+        for y in range(self.grid_size):
+            for x in range(self.grid_size):
+                # If the cell is free (0) and we have a chance to add a slippery floor
+                if self.grid[y][x] == self.CELL_FREE and random.random() < SLIPPERY_PROB:
+                    # Ensure it's not the start or goal point
+                    if (x, y) != (0, 0) and (x, y) != (self.grid_size - 1, self.grid_size - 1):
+                        self.grid[y][x] = self.CELL_SLIPPERY 
+                        
+        # Ensure Start (0,0) and Goal (N-1, N-1) are always normal free cells (0)
+        self.grid[0][0] = self.CELL_FREE
+        self.grid[self.grid_size - 1][self.grid_size - 1] = self.CELL_FREE
+                    
         return self.grid
     
     def _generate_simple_path(self) -> List[Tuple[int, int]]:
@@ -180,12 +330,4 @@ class GridGenerator:
         
         return safe_zone
     
-    def __str__(self) -> str:
-        """String representation of the grid for visualization."""
-        if not self.grid:
-            return "Grid not generated yet"
-        
-        result = []
-        for row in self.grid:
-            result.append(' '.join(['■' if cell == 1 else '□' for cell in row]))
-        return '\n'.join(result)
+    # The string representation is provided by __str__ above; trailing duplicate removed.

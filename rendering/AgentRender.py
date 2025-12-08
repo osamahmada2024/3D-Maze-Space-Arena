@@ -443,9 +443,9 @@ class AgentRender:
         
         glEnd()
 from OpenGL.GL import *
-from Agent import Agent
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
+from core.Agent import Agent
 
 class AgentRender:
     def __init__(self, cell_size=60):

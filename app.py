@@ -16,16 +16,52 @@ from OpenGL.GLU import *
 # from PathfindingEngine import PathfindingEngine
 # from EnvironmentRender import EnvironmentRender3D
 
-import ui
-import core
-import forest
-import gestures
-import features
-import rendering    
+# import ui
+# import core
+# import forest
+# import gestures
+# import features
+# import rendering    
+from core.Agent import Agent
+from core.Player import Player
+from core.Player import GameMode
+from core.Player import PowerUpType
+from core.Player import MatchManager
+from core.GridUtils import GridUtils
+from core.GridGenerator import GridGenerator
+from core.PathfindingEngine import PathfindingEngine
+
+from rendering.GoalRender import GoalRender
+from rendering.PathRender import PathRender
+from rendering.AgentRender import AgentRender
 from rendering.MenuManager import MenuManager
+from rendering.EnvironmentRender import EnvironmentRender3D
+
+
+from features.Feature_Valcon_Maze import Audio
+from features.Feature_Valcon_Maze import BurnTile
+from features.Feature_Valcon_Maze import Particle
+from features.Feature_Valcon_Maze import Obstacles
+from features.Feature_Valcon_Maze import MovingLava
+from features.Feature_Valcon_Maze import Obstacles  
+from features.Feature_Valcon_Maze import FallingStone
+# from features.Feature_Valcon_Maze import ParticleSystem # THIS FILE IS Named in rendering/__init__.py
+from features.Feature_Valcon_Maze import LavaEnvironment
+from features.lucky_blocks import (
+        LuckyBlock,
+        EffectType,
+        ActiveEffect,
+        TeleportPoint,
+        GameFlowIntegration,
+        LuckyBlockTeleportSystem,
+    )
 
 
 
+
+
+from ui.MenuManager import MenuManager
+from ui.CameraController import CameraController
 
 # Screen configuration
 WIDTH, HEIGHT = 1200, 800

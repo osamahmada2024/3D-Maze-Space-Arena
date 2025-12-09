@@ -1,15 +1,16 @@
-
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
 class PathRender:
     """
-    Role: Renders the agent's remaining path and the phosphorescent movement trail.
+    Role: Renders the agent's remaining path and the Flash-style movement trail.
+    Optimized for smooth performance.
     """
 
-    def __init__(self, cell_size=1.0, grid_size=25):
+    def __init__(self, cell_size=1.0, grid_size=25, ground_sampler=None):
         self.cell_size = cell_size
         self.grid_size = grid_size
+        self.ground_sampler = ground_sampler
 
     def draw_path(self, agent):
         """
@@ -29,32 +30,61 @@ class PathRender:
         for i in range(start_index, len(agent.path)):
             pos = agent.path[i]
             
-            # Convert grid coordinates to world coordinates
             x = (pos[0] - self.grid_size//2) * self.cell_size
             z = (pos[1] - self.grid_size//2) * self.cell_size
-            
-            glVertex3f(float(x), 0.01, float(z))
+
+            if self.ground_sampler is not None:
+                y = self.ground_sampler(x, z) + 0.1
+            else:
+                y = 0.01
+
+            glVertex3f(float(x), float(y), float(z))
         glEnd()
 
     def draw_history(self, agent):
         """
-        Draws the agent's historical movement trail with a glow effect.
+        ✨ Optimized Flash-style trail - single draw call
         """
-        if not agent.history:
+        if not agent.history or len(agent.history) < 2:
             return
 
-        history_length = len(agent.history)
+        history_list = list(agent.history)
+        history_length = len(history_list)
+        half_grid = self.grid_size // 2
         
-        glLineWidth(3.0)
         glEnable(GL_LINE_SMOOTH)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         
+        # ✨ تحسين: رسم الذيل كـ LINE_STRIP واحد مع تغيير الألوان
+        glLineWidth(3.0)
         glBegin(GL_LINE_STRIP)
-
-        for i, pos in enumerate(agent.history):
-            alpha = max(0.2, i / history_length)
-            glColor4f(agent.color[0], agent.color[1], agent.color[2], alpha)
+        
+        for i, pos in enumerate(history_list):
+            # حساب الشفافية - القديم شفاف، الجديد واضح
+            if history_length > 1:
+                norm = float(i) / float(history_length - 1)
+            else:
+                norm = 1.0
             
-            # pos is already in world coordinates from Agent.update()
-            glVertex3f(pos[0] - self.grid_size//2, 0.3, pos[2] - self.grid_size//2)
+            # تأثير Flash - تلاشي تدريجي
+            alpha = norm ** 0.5
+            glow = 0.5 + (norm * 0.5)
             
+            glColor4f(
+                agent.color[0] * glow,
+                agent.color[1] * glow,
+                agent.color[2] * glow,
+                alpha
+            )
+            
+            glVertex3f(
+                pos[0] - half_grid,
+                0.3,
+                pos[2] - half_grid
+            )
+        
         glEnd()
+        
+        glDisable(GL_BLEND)
+        glLineWidth(1.0)

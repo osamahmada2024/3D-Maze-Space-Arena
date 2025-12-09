@@ -39,9 +39,10 @@ class AgentRender:
             agent: Agent object with position and color
             shape_type: Type of agent shape to render
         """
-        agent_x = agent.position[0] - self.grid_size//2
+        # Convert agent grid coordinates to world coordinates (centered, scaled)
+        agent_x = (agent.position[0] - self.grid_size // 2) * self.cell_size
         agent_y = agent.position[1]
-        agent_z = agent.position[2] - self.grid_size//2
+        agent_z = (agent.position[2] - self.grid_size // 2) * self.cell_size
         
         glPushMatrix()
         glTranslatef(agent_x, agent_y, agent_z)

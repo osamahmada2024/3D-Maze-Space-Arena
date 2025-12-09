@@ -2,7 +2,10 @@ import random
 from typing import List, Tuple
 
 class Particle:
-    def _init_(self, position: Tuple[float, float, float], velocity: Tuple[float, float, float], color: Tuple[float, float, float, float], lifetime: float):
+    def __init__(self, position: Tuple[float, float, float], 
+                 velocity: Tuple[float, float, float], 
+                 color: Tuple[float, float, float, float], 
+                 lifetime: float):
         self.position = list(position)
         self.velocity = list(velocity)
         self.color = list(color)
@@ -21,10 +24,14 @@ class Particle:
         return self.age < self.lifetime
 
 class ParticleSystem:
-    def _init_(self):
+    def __init__(self):
         self.particles: List[Particle] = []
 
-    def emit(self, position: Tuple[float, float, float], count: int, color: Tuple[float, float, float, float], speed: float, lifetime: float):
+    def emit(self, position: Tuple[float, float, float], 
+             count: int, 
+             color: Tuple[float, float, float, float], 
+             speed: float, 
+             lifetime: float):
         for _ in range(count):
             vx = (random.random() - 0.5) * speed
             vy = random.random() * speed

@@ -327,6 +327,8 @@ class EnvironmentRender3D:
         self._mesh_cache[key] = mesh
         return mesh
 
+    
+
     def _draw_mountain_mesh(self, radius, height, radial_res=24, angular_res=56, noise_scale=1.0, noise_amp=1.0, seed=None):
         mesh = self._build_mountain_mesh(radius, height, radial_res, angular_res, noise_scale, noise_amp, seed)
         verts = mesh["verts"]; normals = mesh["normals"]; indices = mesh["indices"]
@@ -427,21 +429,44 @@ class EnvironmentRender3D:
         glEnable(GL_LIGHTING)
 
     def _draw_mountains(self):
-        glPushMatrix()
-        glTranslatef(-self.grid_size * 0.42 * self.cell_size, 0.0, -self.grid_size * 0.7 * self.cell_size)
-        glScalef(self.cell_size, self.cell_size, self.cell_size)
-        radius1 = max(2.0, self.grid_size * 0.06)
-        height1 = max(2.8, self.grid_size * 0.12)
-        self._draw_mountain_mesh(radius1, height1, radial_res=28, angular_res=68, noise_scale=1.0, noise_amp=1.05, seed=42)
-        glPopMatrix()
+        """
+        Place several slightly larger mountains inside the map bounds.
+        Each mountain uses a deterministic seed so layout is reproducible.
+        """
+        # three positions inside the play area (relative to center)
+        positions = [
+            (-self.grid_size * 0.25 * self.cell_size, -self.grid_size * 0.10 * self.cell_size),
+            ( self.grid_size * 0.20 * self.cell_size,  self.grid_size * 0.055  * self.cell_size),
+            ( 0.0,                                 self.grid_size * 0.35  * self.cell_size),
+        ]
 
-        glPushMatrix()
-        glTranslatef(self.grid_size * 0.5 * self.cell_size, 0.0, self.grid_size * 0.85 * self.cell_size)
-        glScalef(self.cell_size, self.cell_size, self.cell_size)
-        radius2 = max(2.4, self.grid_size * 0.07)
-        height2 = max(3.6, self.grid_size * 0.14)
-        self._draw_mountain_mesh(radius2, height2, radial_res=24, angular_res=60, noise_scale=0.9, noise_amp=0.9, seed=999)
-        glPopMatrix()
+        # configs: (radius, height, radial_res, angular_res, noise_scale, noise_amp, seed)
+        configs = [
+            (max(1.0, self.grid_size * 0.03) * 1.25, max(1.7, self.grid_size * 0.069) * 1.25, 20, 48, 0.9, 0.99, 11),
+            (max(0.8, self.grid_size * 0.025) * 1.25, max(1.6, self.grid_size * 0.059) * 1.25, 18, 44, 0.8, 0.89, 42),
+            (max(0.9, self.grid_size * 0.028) * 1.25, max(1.1, self.grid_size * 0.055) * 1.25, 20, 52, 1.0, 0.95, 999),
+        ]
+
+        for (pos, cfg) in zip(positions, configs):
+            x_pos, z_pos = pos
+            radius, height, radial_res, angular_res, noise_scale, noise_amp, seed = cfg
+            glPushMatrix()
+            # translate to the chosen position (already in world units)
+            glTranslatef(x_pos, 0.0, z_pos)
+            # scale by cell_size to match world-to-grid scaling
+            glScalef(self.cell_size, self.cell_size, self.cell_size)
+            # draw mountain
+            self._draw_mountain_mesh(
+                radius,
+                height,
+                radial_res=radial_res,
+                angular_res=angular_res,
+                noise_scale=noise_scale,
+                noise_amp=noise_amp,
+                seed=seed
+            )
+            glPopMatrix()
+
 
     def _draw_forest(self):
         for inst in self._tree_instances:

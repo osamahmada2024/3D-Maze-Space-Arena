@@ -291,7 +291,7 @@ class EnvironmentRender3D:
                 for octv in range(3):
                     nx = (x + seed) * (noise_scale * freq) / max(1.0, radius)
                     nz = (z + seed) * (noise_scale * freq) / max(1.0, radius)
-                    n_val += pnoise2(nx, nz, repeatx=1024, repeaty=1024) * amp
+                    n_val += pnoise2(nx, nz, repeatx=1024, repeaty=1024) * amp    
                     freq *= 2.0; amp *= 0.5
                 y = max(0.0, base_profile * height + (n_val * noise_amp * base_profile * height * 0.6))
                 verts.append([x, y, z]); normals.append([0.0, 0.0, 0.0])

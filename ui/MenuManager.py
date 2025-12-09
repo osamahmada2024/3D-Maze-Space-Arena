@@ -28,11 +28,16 @@ class MenuManager:
             {"name": "Crystal Alien", "key": "crystal_alien", "desc": "Mysterious gem entity"}
         ]
         
+        self.themes = [
+            {"name": "Standard (Space)", "key": "DEFAULT", "desc": "Classic sci-fi maze experience"},
+            {"name": "Forest Maze", "key": "FOREST", "desc": "Atmospheric forest with fog and obstacles"}
+        ]
         self.algorithms = ["A* search", "Dijkstra", "DFS", "BFS"]
         self.selected_agent = None
+        self.selected_theme = None
         self.selected_algo = None
         self.cursor_pos = 0
-        self.stage = 1
+        self.stage = 0
         self.running = True
 
     def draw_animated_gradient(self, t):
@@ -93,14 +98,43 @@ class MenuManager:
 
     def draw_menu(self, t):
         """Main menu rendering"""
-        if self.stage == 1:
+        if self.stage == 0:
+            # Theme selection screen
+            title = self.FONT.render("Select Game Theme", True, self.WHITE)
+            self.screen.blit(title, (self.WIDTH//2 - title.get_width()//2, 40))
+            
+            subtitle = self.FONT_TINY.render("Choose your environment", True, self.GRAY)
+            self.screen.blit(subtitle, (self.WIDTH//2 - subtitle.get_width()//2, 85))
+
+            for i, theme in enumerate(self.themes):
+                y = 150 + i*110
+                
+                # Highlight selected
+                if self.selected_theme == theme["key"]:
+                    box = pygame.Rect(80, y-10, self.WIDTH-160, 100)
+                    pygame.draw.rect(self.screen, (50, 60, 80), box, border_radius=10)
+                
+                # Theme name
+                txt_color = self.YELLOW if self.selected_theme == theme["key"] else self.WHITE
+                txt = self.FONT.render(theme["name"], True, txt_color)
+                self.screen.blit(txt, (180, y+5))
+                
+                # Description
+                desc_txt = self.FONT_SMALL.render(theme["desc"], True, self.GRAY)
+                self.screen.blit(desc_txt, (180, y+40))
+                
+                # Cursor
+                if i == self.cursor_pos:
+                    self.draw_cursor(70, y+35, t)
+
+        elif self.stage == 1:
             # Agent selection screen
             title = self.FONT.render("Select Your Agent Shape", True, self.WHITE)
             self.screen.blit(title, (self.WIDTH//2 - title.get_width()//2, 40))
             
             subtitle = self.FONT_TINY.render("Choose the visual appearance of your pathfinding agent", True, self.GRAY)
             self.screen.blit(subtitle, (self.WIDTH//2 - subtitle.get_width()//2, 85))
-
+            
             for i, agent in enumerate(self.agents):
                 y = 150 + i*110
                 
@@ -167,7 +201,7 @@ class MenuManager:
                     self.draw_cursor(70, y+25, t)
         
         # Instructions at bottom
-        if self.stage == 1:
+        if self.stage < 2:
             inst = self.FONT_TINY.render("↑↓ Navigate | ENTER Select | ESC Exit", True, self.GRAY)
         else:
             inst = self.FONT_TINY.render("↑↓ Navigate | ENTER Confirm & Start | ESC Exit", True, self.GRAY)
@@ -176,6 +210,8 @@ class MenuManager:
     def run(self):
         """Main menu loop"""
         t = 0
+        self.stage = 0 # Start at theme selection
+        
         while self.running:
             t += 0.016
             self.screen.fill(self.WHITE)
@@ -186,12 +222,14 @@ class MenuManager:
                     self.running = False
                     self.selected_agent = None
                     self.selected_algo = None
+                    self.selected_theme = None
 
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.running = False
                         self.selected_agent = None
                         self.selected_algo = None
+                        self.selected_theme = None
                         
                     elif event.key == pygame.K_DOWN:
                         self.cursor_pos += 1
@@ -200,13 +238,19 @@ class MenuManager:
                         self.cursor_pos -= 1
                         
                     # Wrap cursor
-                    if self.stage == 1:
+                    if self.stage == 0:
+                        self.cursor_pos %= len(self.themes)
+                    elif self.stage == 1:
                         self.cursor_pos %= len(self.agents)
                     else:
                         self.cursor_pos %= len(self.algorithms)
 
                     if event.key == pygame.K_RETURN:
-                        if self.stage == 1:
+                        if self.stage == 0:
+                            self.selected_theme = self.themes[self.cursor_pos]["key"]
+                            self.stage = 1
+                            self.cursor_pos = 0
+                        elif self.stage == 1:
                             self.selected_agent = self.agents[self.cursor_pos]["key"]
                             self.stage = 2
                             self.cursor_pos = 0

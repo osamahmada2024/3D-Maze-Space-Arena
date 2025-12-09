@@ -1,3 +1,6 @@
 pygame==2.6.1
 PyOpenGL==3.1.10
 PyOpenGL-accelerate==3.1.10
+noise==1.2.2
+numpy==1.26.4
+Pillow==10.1.0

@@ -211,6 +211,11 @@ class EnvironmentObjectManager:
         for y in range(len(grid)):
             for x in range(len(grid[0])):
                 if grid[y][x] == 1:  # Wall = Tree
+                    # Reduce density: only place tree 50% of the time, or depends on neighbor count?
+                    # User asked to "reduce trees alil bit". 
+                    if random.random() > 0.5: 
+                        continue
+
                     wx = (x - self.grid_size // 2) * self.cell_size
                     wz = (y - self.grid_size // 2) * self.cell_size
                     

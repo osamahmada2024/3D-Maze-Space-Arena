@@ -57,16 +57,10 @@ class Agent:
         """
         if self.path_i < len(self.path):
             tx, ty = self.path[self.path_i]
-            GRID_SIZE = len(self.grid) if self.grid else 0
-            if GRID_SIZE:
-                wx = tx - GRID_SIZE // 2
-                wz = ty - GRID_SIZE // 2
-                return wx, wz
+            # Path stores grid coordinates (0..N-1). Return them directly
             return tx, ty
 
-        GRID_SIZE = len(self.grid) if self.grid else 0
-        if GRID_SIZE:
-            return self.goal[0] - GRID_SIZE // 2, self.goal[1] - GRID_SIZE // 2
+        # If no more path entries, return goal as grid coordinates
         return self.goal
 
     def reached_goal(self) -> bool:
@@ -111,8 +105,9 @@ class Agent:
         cell_type = 0
         if self.grid:
             grid_size = len(self.grid)
-            current_grid_x = round(x) + grid_size // 2
-            current_grid_y = round(z) + grid_size // 2
+            # Position is stored in grid coordinates (0..N-1)
+            current_grid_x = int(round(x))
+            current_grid_y = int(round(z))
             if 0 <= current_grid_y < grid_size and 0 <= current_grid_x < grid_size:
                 cell_type = self.grid[current_grid_y][current_grid_x]
             

@@ -5,16 +5,27 @@ import random
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
-from Agent import Agent
-from GridUtils import GridUtils
-from PathRender import PathRender
-from GoalRender import GoalRender
-from MenuManager import MenuManager
-from AgentRender import AgentRender
-from GridGenerator import GridGenerator
-from CameraController import CameraController
-from PathfindingEngine import PathfindingEngine
-from EnvironmentRender import EnvironmentRender3D
+# from Agent import Agent
+# from GridUtils import GridUtils
+# from PathRender import PathRender
+# from GoalRender import GoalRender
+# from MenuManager import MenuManager
+# from AgentRender import AgentRender
+# from GridGenerator import GridGenerator
+# from CameraController import CameraController
+# from PathfindingEngine import PathfindingEngine
+# from EnvironmentRender import EnvironmentRender3D
+
+import ui
+import core
+import forest
+import gestures
+import features
+import rendering    
+from rendering.MenuManager import MenuManager
+
+
+
 
 # Screen configuration
 WIDTH, HEIGHT = 1200, 800

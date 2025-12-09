@@ -1,6 +1,8 @@
 """
-rendering/AgentRender.py - Enhanced Agent Rendering
-Renders different agent shapes with visual effects
+rendering/AgentRender.py - Enhanced Agent Rendering (FIXED)
+✅ Fixed colors - no more gray agents
+✅ Stable rendering without position conversion
+✅ Better visual effects
 """
 
 import math
@@ -11,8 +13,8 @@ from OpenGL.GLU import *
 
 class AgentRender:
     """
-    Renders different agent shapes with glow effects.
-    Supports: sphere_droid, robo_cube, mini_drone, crystal_alien
+    Renders different agent shapes with proper colors.
+    ✅ FIXED: No more gray agents!
     """
     
     def __init__(self, cell_size=1.0, grid_size=25):
@@ -27,27 +29,22 @@ class AgentRender:
         self.grid_size = grid_size
         self.start_time = time.time()
         
-        # Track last drone direction for rotation
+        # Track drone rotation
         self.last_drone_direction = None
         self.drone_rotation_angle = 0.0
     
     def draw_agent(self, agent, shape_type="sphere_droid"):
         """
-        Main draw method that delegates to specific shape renderers.
+        Main draw method - NO POSITION CONVERSION HERE!
+        Agent is already positioned by glTranslatef in main loop.
         
         Args:
-            agent: Agent object with position and color
+            agent: Agent object with color
             shape_type: Type of agent shape to render
         """
-        # Convert agent grid coordinates to world coordinates (centered, scaled)
-        agent_x = (agent.position[0] - self.grid_size // 2) * self.cell_size
-        agent_y = agent.position[1]
-        agent_z = (agent.position[2] - self.grid_size // 2) * self.cell_size
+        # NO translation here - already done in app.py!
+        # Just draw the shape at origin (0,0,0)
         
-        glPushMatrix()
-        glTranslatef(agent_x, agent_y, agent_z)
-        
-        # Draw based on shape type
         if shape_type == "sphere_droid":
             self._draw_sphere_droid(agent)
         elif shape_type == "robo_cube":
@@ -57,16 +54,16 @@ class AgentRender:
         elif shape_type == "crystal_alien":
             self._draw_crystal_alien(agent)
         else:
-            self._draw_sphere_droid(agent)  # Default
-        
-        glPopMatrix()
+            self._draw_sphere_droid(agent)
     
     def _draw_sphere_droid(self, agent):
-        """Sphere Droid - Classic glowing sphere"""
+        """Sphere Droid - Classic glowing sphere - FIXED COLORS."""
         # Main solid sphere
         glEnable(GL_DEPTH_TEST)
         glDepthMask(GL_TRUE)
         glEnable(GL_LIGHTING)
+        
+        # USE AGENT COLOR - NOT GRAY!
         glColor3f(*agent.color)
         
         quad = gluNewQuadric()
@@ -79,18 +76,17 @@ class AgentRender:
         glDepthMask(GL_FALSE)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glColor4f(*agent.color, 0.15)
+        glColor4f(*agent.color, 0.2)
         
         quad_glow = gluNewQuadric()
-        gluSphere(quad_glow, 0.4, 16, 16)
+        gluSphere(quad_glow, 0.35, 16, 16)
         gluDeleteQuadric(quad_glow)
         
-        # Restore states
         glDepthMask(GL_TRUE)
         glEnable(GL_LIGHTING)
     
     def _draw_robo_cube(self, agent):
-        """Robo Cube - Static cube with edges (NO rotation)"""
+        """Robo Cube - Static cube - FIXED COLORS."""
         size = 0.4
         
         # Main cube body
@@ -108,22 +104,21 @@ class AgentRender:
         )
         self._draw_cube_edges(size)
         
-        # Subtle glow
+        # Glow
         glDepthMask(GL_FALSE)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        glColor4f(*agent.color, 0.08)
+        glColor4f(*agent.color, 0.1)
         self._draw_cube(size * 1.15)
         glDepthMask(GL_TRUE)
         
         glEnable(GL_LIGHTING)
     
     def _calculate_drone_rotation(self, agent):
-        """Calculate drone rotation based on movement direction"""
+        """Calculate drone rotation based on movement"""
         if agent.path_i >= len(agent.path):
             return self.drone_rotation_angle
         
-        # Get current target
         if agent.path_i < len(agent.path):
             target = agent.path[agent.path_i]
             current = (agent.position[0], agent.position[2])
@@ -131,7 +126,6 @@ class AgentRender:
             dx = target[0] - current[0]
             dz = target[1] - current[1]
             
-            # Calculate angle only if there's significant movement
             if abs(dx) > 0.01 or abs(dz) > 0.01:
                 angle = math.degrees(math.atan2(dz, dx))
                 self.drone_rotation_angle = angle
@@ -139,29 +133,26 @@ class AgentRender:
         return self.drone_rotation_angle
     
     def _draw_mini_drone(self, agent):
-        """Mini Flying Drone - Body with propellers, matte finish"""
+        """Mini Drone - FIXED COLORS."""
         current_time = time.time() - self.start_time
         prop_rotation = (current_time * 500.0) % 360.0
         bob = math.sin(current_time * 3.0) * 0.05
         
-        # Calculate rotation based on movement direction
         rotation_angle = self._calculate_drone_rotation(agent)
         
         glTranslatef(0, bob, 0)
         glRotatef(rotation_angle, 0, 1, 0)
         
-        # Main body (ellipsoid) - MATTE finish
+        # Main body - USE AGENT COLOR
         glEnable(GL_NORMALIZE)
         glEnable(GL_LIGHTING)
         glEnable(GL_DEPTH_TEST)
         glDepthMask(GL_TRUE)
-        glDisable(GL_BLEND)
         
-        # Set material properties for MATTE appearance
         glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, [0.4, 0.4, 0.4, 1.0])
         glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, [*agent.color, 1.0])
-        glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, [0.1, 0.1, 0.1, 1.0])
-        glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 5.0)
+        glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, [0.2, 0.2, 0.2, 1.0])
+        glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 10.0)
         
         glColor3f(*agent.color)
         
@@ -173,22 +164,15 @@ class AgentRender:
         gluDeleteQuadric(quad)
         glPopMatrix()
         
-        # Propeller arms
+        # Arms and propellers
         glDisable(GL_LIGHTING)
-        glColor3f(
-            agent.color[0] * 0.4,
-            agent.color[1] * 0.4,
-            agent.color[2] * 0.4
-        )
+        glColor3f(agent.color[0] * 0.5, agent.color[1] * 0.5, agent.color[2] * 0.5)
         
         arm_positions = [
-            (0.35, 0.12, 0.35),
-            (-0.35, 0.12, 0.35),
-            (0.35, 0.12, -0.35),
-            (-0.35, 0.12, -0.35)
+            (0.35, 0.12, 0.35), (-0.35, 0.12, 0.35),
+            (0.35, 0.12, -0.35), (-0.35, 0.12, -0.35)
         ]
         
-        # Draw arms
         for px, py, pz in arm_positions:
             glPushMatrix()
             glTranslatef(px/2, py/2, pz/2)
@@ -201,12 +185,7 @@ class AgentRender:
             glPushMatrix()
             glTranslatef(px, py, pz)
             
-            # Propeller support
-            glColor3f(
-                agent.color[0] * 0.25,
-                agent.color[1] * 0.25,
-                agent.color[2] * 0.25
-            )
+            glColor3f(agent.color[0] * 0.3, agent.color[1] * 0.3, agent.color[2] * 0.3)
             glBegin(GL_QUADS)
             glVertex3f(-0.02, -0.08, -0.02)
             glVertex3f(0.02, -0.08, -0.02)
@@ -214,39 +193,26 @@ class AgentRender:
             glVertex3f(-0.02, 0, 0.02)
             glEnd()
             
-            # Rotating blades
             glRotatef(prop_rotation, 0, 1, 0)
-            glColor3f(
-                agent.color[0] * 0.8,
-                agent.color[1] * 0.8,
-                agent.color[2] * 0.8
-            )
+            glColor3f(agent.color[0] * 0.8, agent.color[1] * 0.8, agent.color[2] * 0.8)
             
             glBegin(GL_QUADS)
-            # Main blade
             glVertex3f(-0.28, 0.01, -0.05)
             glVertex3f(0.28, 0.01, -0.05)
             glVertex3f(0.2, 0.01, 0.04)
             glVertex3f(-0.2, 0.01, 0.04)
             
-            # Cross blade
             glVertex3f(-0.04, 0.01, -0.2)
             glVertex3f(0.04, 0.01, -0.2)
             glVertex3f(0.04, 0.01, 0.2)
             glVertex3f(-0.04, 0.01, 0.2)
             glEnd()
-            
             glPopMatrix()
         
-        # Restore default material
-        glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, [1.0, 1.0, 1.0, 1.0])
-        glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 50.0)
-        
-        glEnable(GL_BLEND)
         glEnable(GL_LIGHTING)
     
     def _draw_crystal_alien(self, agent):
-        """Crystal Alien - Diamond shape with proper lighting"""
+        """Crystal Alien - FIXED COLORS."""
         current_time = time.time() - self.start_time
         rotation = (current_time * 30.0) % 360.0
         pulse = (math.sin(current_time * 2.0) + 1.0) / 2.0 * 0.1 + 0.9
@@ -254,17 +220,14 @@ class AgentRender:
         glRotatef(rotation, 0, 1, 0)
         glScalef(pulse, pulse, pulse)
         
-        # Setup material properties
         glEnable(GL_NORMALIZE)
         glEnable(GL_LIGHTING)
-        glEnable(GL_LIGHT0)
         
         glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, [0.3, 0.3, 0.3, 1.0])
         glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, [
             agent.color[0] * 1.2,
             agent.color[1] * 1.2,
-            agent.color[2] * 1.2,
-            1.0
+            agent.color[2] * 1.2, 1.0
         ])
         glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, [1.0, 1.0, 1.0, 1.0])
         glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 128.0)
@@ -277,11 +240,10 @@ class AgentRender:
         glDepthMask(GL_FALSE)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE)
-        glColor4f(*agent.color, 0.15)
+        glColor4f(*agent.color, 0.2)
         self._draw_real_diamond(0.28)
         
-        # Outer glow
-        glColor4f(*agent.color, 0.05)
+        glColor4f(*agent.color, 0.08)
         self._draw_real_diamond(0.45)
         
         glDepthMask(GL_TRUE)
@@ -289,7 +251,7 @@ class AgentRender:
         glEnable(GL_LIGHTING)
     
     def _draw_cube(self, size):
-        """Helper: Draw a solid cube"""
+        """Helper: Draw a cube"""
         s = size / 2.0
         glBegin(GL_QUADS)
         
@@ -306,42 +268,39 @@ class AgentRender:
             glNormal3f(*normal)
             for v in vertices:
                 glVertex3f(*v)
-        
         glEnd()
     
     def _draw_cube_edges(self, size):
-        """Helper: Draw cube wireframe edges"""
+        """Helper: Draw cube edges"""
         s = size / 2.0
         glBegin(GL_LINES)
         
-        # Bottom square
+        # Bottom
         glVertex3f(-s, -s, -s); glVertex3f(s, -s, -s)
         glVertex3f(s, -s, -s); glVertex3f(s, -s, s)
         glVertex3f(s, -s, s); glVertex3f(-s, -s, s)
         glVertex3f(-s, -s, s); glVertex3f(-s, -s, -s)
         
-        # Top square
+        # Top
         glVertex3f(-s, s, -s); glVertex3f(s, s, -s)
         glVertex3f(s, s, -s); glVertex3f(s, s, s)
         glVertex3f(s, s, s); glVertex3f(-s, s, s)
         glVertex3f(-s, s, s); glVertex3f(-s, s, -s)
         
-        # Vertical edges
+        # Vertical
         glVertex3f(-s, -s, -s); glVertex3f(-s, s, -s)
         glVertex3f(s, -s, -s); glVertex3f(s, s, -s)
         glVertex3f(s, -s, s); glVertex3f(s, s, s)
         glVertex3f(-s, -s, s); glVertex3f(-s, s, s)
-        
         glEnd()
     
     def _draw_real_diamond(self, size):
-        """Helper: Draw a diamond shape with proper normals"""
+        """Helper: Draw diamond shape"""
         mid_height = size * 0.4
         bottom_height = size * 1.1
         top_radius = size * 0.6
         mid_radius = size
         
-        # Top cap
         glDisable(GL_LIGHTING)
         glBegin(GL_QUADS)
         glNormal3f(0, 1, 0)
@@ -352,8 +311,6 @@ class AgentRender:
         glEnd()
         
         glEnable(GL_LIGHTING)
-        
-        # Middle trapezoid
         glBegin(GL_QUADS)
         
         glNormal3f(0, 0.6, 0.8)
@@ -379,12 +336,9 @@ class AgentRender:
         glVertex3f(-top_radius, mid_height, top_radius)
         glVertex3f(-mid_radius, 0, mid_radius)
         glVertex3f(-mid_radius, 0, -mid_radius)
-        
         glEnd()
         
-        # Bottom pyramid
         glBegin(GL_TRIANGLES)
-        
         bottom_y = -bottom_height
         
         glNormal3f(0, -0.4, 0.92)
@@ -406,5 +360,4 @@ class AgentRender:
         glVertex3f(0, bottom_y, 0)
         glVertex3f(-mid_radius, 0, mid_radius)
         glVertex3f(-mid_radius, 0, -mid_radius)
-        
         glEnd()

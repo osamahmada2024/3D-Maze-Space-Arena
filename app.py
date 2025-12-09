@@ -1,6 +1,10 @@
 """
-app.py - Main Ice Maze Application (Enhanced)
-3D Ice Maze with multiple agent shapes and pathfinding algorithms
+app.py - Main Ice Maze Application (FIXED VERSION)
+✅ Fixed camera distance
+✅ Fixed agent colors
+✅ Fixed obstacle colors
+✅ Fixed agent path following
+✅ Stable rendering
 """
 
 import sys
@@ -32,7 +36,7 @@ CELL_SLIPPERY = 2
 
 
 def draw_cube(size):
-    """Draw a cube for obstacles."""
+    """Draw a cube for obstacles - FIXED COLORS."""
     s = size / 2.0
     glBegin(GL_QUADS)
     
@@ -54,7 +58,7 @@ def draw_cube(size):
 
 
 def init_opengl():
-    """Initialize OpenGL settings."""
+    """Initialize OpenGL settings - STABLE."""
     glClearColor(0.02, 0.02, 0.1, 1.0)
     glEnable(GL_DEPTH_TEST)
     glDepthFunc(GL_LESS)
@@ -70,8 +74,8 @@ def init_opengl():
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE)
     
     glLightfv(GL_LIGHT0, GL_POSITION, [5.0, 10.0, 5.0, 1.0])
-    glLightfv(GL_LIGHT0, GL_AMBIENT, [0.1, 0.1, 0.2, 1.0])
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, [0.5, 0.6, 0.8, 1.0])
+    glLightfv(GL_LIGHT0, GL_AMBIENT, [0.3, 0.3, 0.4, 1.0])
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, [0.8, 0.8, 1.0, 1.0])
     
     glEnable(GL_FOG)
     glFogfv(GL_FOG_COLOR, [0.05, 0.1, 0.15, 1.0])
@@ -80,7 +84,7 @@ def init_opengl():
 
 
 def setup_view(camera):
-    """Setup camera view."""
+    """Setup camera view - FIXED DISTANCE."""
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
     gluPerspective(60, WIDTH / HEIGHT, 0.1, 100.0)
@@ -97,11 +101,12 @@ def setup_view(camera):
 
 
 def draw_floor(grid_size, grid):
-    """Draw floor with slippery zones."""
+    """Draw floor with slippery zones - FIXED COLORS."""
     glDisable(GL_LIGHTING)
     grid_size_half = grid_size / 2 * CELL_SIZE
     
-    glColor3f(0.15, 0.2, 0.25)
+    # Base floor - dark blue
+    glColor3f(0.1, 0.15, 0.25)
     glBegin(GL_QUADS)
     glVertex3f(-grid_size_half, 0, -grid_size_half)
     glVertex3f(grid_size_half, 0, -grid_size_half)
@@ -109,8 +114,8 @@ def draw_floor(grid_size, grid):
     glVertex3f(-grid_size_half, 0, grid_size_half)
     glEnd()
 
-    # Slippery zones
-    glColor3f(0.3, 0.35, 0.4)
+    # Slippery zones - lighter blue
+    glColor3f(0.2, 0.3, 0.45)
     for y in range(grid_size):
         for x in range(grid_size):
             if grid[y][x] == CELL_SLIPPERY:
@@ -132,10 +137,12 @@ def draw_floor(grid_size, grid):
 
 
 def draw_obstacles(grid):
-    """Draw ice block obstacles."""
+    """Draw ice block obstacles - FIXED COLORS (STABLE)."""
     glEnable(GL_LIGHTING)
     glEnable(GL_BLEND)
-    glColor4f(0.6, 0.8, 0.95, 0.6)
+    
+    # ثابت - لون ثلج أزرق فاتح شفاف
+    glColor4f(0.5, 0.7, 0.95, 0.7)
     
     grid_size = len(grid)
     for y in range(grid_size):
@@ -146,19 +153,19 @@ def draw_obstacles(grid):
                 
                 glPushMatrix()
                 glTranslatef(wx, 0.6, wz)
-                draw_cube(CELL_SIZE * 1.1)
+                draw_cube(CELL_SIZE * 1.0)
                 glPopMatrix()
 
     glDisable(GL_BLEND)
 
 
 def main():
-    """Main application."""
+    """Main application - FULLY FIXED."""
     print("="*70)
-    print("🎮 3D Maze Arena - Ice Maze (Enhanced)")
+    print("🎮 3D Maze Arena - Ice Maze (FIXED VERSION)")
     print("="*70)
     
-    # Menu - Now with agent shape selection
+    # Menu - Agent shape selection
     menu = MenuManager()
     menu.run()
     
@@ -175,7 +182,7 @@ def main():
     # Initialize Pygame and OpenGL
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.DOUBLEBUF | pygame.OPENGL)
-    pygame.display.set_caption("3D Maze Arena - Ice Maze")
+    pygame.display.set_caption("3D Maze Arena - Ice Maze (FIXED)")
     clock = pygame.time.Clock()
     init_opengl()
     
@@ -196,24 +203,35 @@ def main():
     
     print(f"✅ Path found: {len(path)} steps")
     
-    # Create agent - Color based on shape
+    # Agent colors - FIXED AND STABLE
     color_map = {
         "sphere_droid": (0.0, 1.0, 1.0),    # Cyan
-        "robo_cube": (1.0, 0.5, 0.0),       # Orange
+        "robo_cube": (1.0, 0.6, 0.0),       # Orange
         "mini_drone": (0.0, 1.0, 0.5),      # Green-cyan
-        "crystal_alien": (1.0, 0.0, 1.0)    # Magenta
+        "crystal_alien": (1.0, 0.2, 1.0)    # Magenta
     }
     
+    agent_color = color_map.get(selected_agent_shape, (0.0, 1.0, 1.0))
+    
+    # Create agent with FIXED parameters
     agent = Agent(
         start, goal, path,
-        speed=2.0,
-        color=color_map.get(selected_agent_shape, (1.0, 1.0, 1.0)),
+        speed=2.5,  # قليلاً أسرع
+        color=agent_color,
         grid=grid
     )
     
     # Rendering systems
     agent_renderer = AgentRender(cell_size=CELL_SIZE, grid_size=GRID_SIZE)
-    camera = CameraController(distance=20, angle_x=45, angle_y=60)
+    
+    # FIXED CAMERA - closer and better angle
+    camera = CameraController(
+        angle_x=0.0,
+        angle_y=60.0,  # زاوية أفضل
+        angle_z=0.0,
+        distance=12.0  # أقرب كتير!
+    )
+    
     goal_renderer = GoalRender(cellSize=CELL_SIZE, grid_size=GRID_SIZE)
     path_renderer = PathRender(cell_size=CELL_SIZE, grid_size=GRID_SIZE)
     particles = ParticleSystem()
@@ -243,32 +261,39 @@ def main():
                 if event.key == pygame.K_ESCAPE:
                     running = False
             elif event.type == pygame.MOUSEWHEEL:
-                camera.zoom(-event.y * 2)
+                camera.zoom(-event.y * 1.5)
         
         # Camera controls
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT]:
-            camera.rotate(-60 * dt, 0)
+            camera.rotate(-45 * dt, 0)
         if keys[pygame.K_RIGHT]:
-            camera.rotate(60 * dt, 0)
+            camera.rotate(45 * dt, 0)
         if keys[pygame.K_UP]:
-            camera.rotate(0, 30 * dt)
+            camera.rotate(0, 25 * dt)
         if keys[pygame.K_DOWN]:
-            camera.rotate(0, -30 * dt)
+            camera.rotate(0, -25 * dt)
         
-        # Update
+        # Update agent
         agent.update(dt)
-        camera.follow_target(agent.position)
+        
+        # Camera follows agent SMOOTHLY
+        agent_world_x = (agent.position[0] - GRID_SIZE//2) * CELL_SIZE
+        agent_world_z = (agent.position[2] - GRID_SIZE//2) * CELL_SIZE
+        camera.follow_target([agent_world_x, 0.0, agent_world_z])
+        
+        # Update particles
         particles.update(dt)
         
         # Rendering
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         setup_view(camera)
         
+        # Draw scene
         draw_floor(GRID_SIZE, grid)
         draw_obstacles(grid)
         
-        # Draw path
+        # Draw path (lighting off for lines)
         glDisable(GL_LIGHTING)
         path_renderer.draw_history(agent)
         path_renderer.draw_path(agent)
@@ -278,8 +303,11 @@ def main():
         if not agent.arrived:
             goal_renderer.draw_goal(agent)
         
-        # Draw agent with selected shape
+        # Draw agent with selected shape - world coordinates
+        glPushMatrix()
+        glTranslatef(agent_world_x, agent.position[1], agent_world_z)
         agent_renderer.draw_agent(agent, shape_type=selected_agent_shape)
+        glPopMatrix()
         
         pygame.display.flip()
         clock.tick(60)

@@ -16,6 +16,9 @@ def main():
     selected_shape = menu.selected_agent
     selected_algo = menu.selected_algo
     selected_theme = menu.selected_theme
+    ### 3amak osama ####
+    selected_Gamemode = menu.selected_gamemode
+    ### 3amak osama ####
 
     if not selected_shape or not selected_algo or not selected_theme:
         print("No selection made. Exiting...")
@@ -24,6 +27,9 @@ def main():
     print(f"Selected Agent Shape: {selected_shape}")
     print(f"Selected Algorithm: {selected_algo}")
     print(f"Selected Theme: {selected_theme}")
+    ### 3amak osama ####
+    print(f"Selected Game Mode: {selected_Gamemode}")   
+    ### 3amak osama ####
 
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.DOUBLEBUF | pygame.OPENGL)

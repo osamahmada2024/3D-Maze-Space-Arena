@@ -1,7 +1,8 @@
 import argparse
 import sys
 from mazespace import Project, load_config
-from mazespace.utils.persistence import save_session, load_session, load_defaults
+from mazespace.utils.persistence import save_session, load_session
+from mazespace.config.loader import load_defaults
 
 def main():
     parser = argparse.ArgumentParser(description="MazeSpace Arena - Configurable 3D Maze")

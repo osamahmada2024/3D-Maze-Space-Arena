@@ -1,0 +1,62 @@
+app:
+  width: 900
+  height: 700
+  fullscreen: false
+  default_theme: "DEFAULT"
+  default_agent: "sphere_droid"
+  default_algo: "A* search"
+
+themes:
+  - key: "DEFAULT"
+    name: "Standard (Space)"
+    desc: "Classic sci-fi maze experience"
+    background_color: [0.1, 0.1, 0.2, 1.0]
+    hazard_damage: 0.0
+    particle_density: 5
+
+  - key: "FOREST"
+    name: "Forest Maze"
+    desc: "Atmospheric forest with fog and fireflies"
+    background_color: [0.05, 0.15, 0.05, 1.0]
+    hazard_damage: 0.0
+    particle_density: 30
+
+  - key: "LAVA"
+    name: "Lava Maze"
+    desc: "Deadly volcanic maze with lava pools!"
+    background_color: [0.2, 0.05, 0.05, 1.0]
+    hazard_damage: 10.0
+    particle_density: 50
+
+agents:
+  - key: "sphere_droid"
+    name: "Sphere Droid"
+    desc: "Classic glowing orb"
+    shape: "sphere"
+    color: [0.0, 1.0, 1.0]
+    scale: 1.0
+    speed: 5.0
+
+  - key: "robo_cube"
+    name: "Robo Cube"
+    desc: "Mechanical cube"
+    shape: "cube"
+    color: [0.0, 1.0, 1.0]
+    scale: 1.2
+    speed: 3.5
+
+  - key: "mini_drone"
+    name: "Mini Drone"
+    desc: "Flying quad-copter"
+    shape: "drone"
+    color: [0.0, 1.0, 1.0]
+    scale: 0.8
+    speed: 7.0
+
+  - key: "crystal_alien"
+    name: "Crystal Alien"
+    desc: "Mysterious gem entity"
+    shape: "crystal"
+    color: [0.8, 0.0, 1.0]
+    scale: 1.1
+    speed: 4.0

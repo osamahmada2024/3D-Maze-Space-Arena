@@ -1,0 +1,21 @@
+app:
+  width: 1024
+  height: 768
+  default_theme: "LAVA"
+
+themes:
+  - key: "LAVA"
+    name: "Hardcore Lava"
+    desc: "Extremely hot lava maze"
+    background_color: [0.3, 0.0, 0.0, 1.0]
+    hazard_damage: 50.0
+    particle_density: 100
+
+agents:
+  - key: "giant_sphere"
+    name: "Giant Sphere"
+    desc: "A massive rolling sphere"
+    shape: "sphere"
+    color: [1.0, 0.5, 0.0]
+    scale: 3.0
+    speed: 2.0

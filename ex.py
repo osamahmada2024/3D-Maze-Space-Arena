@@ -1,24 +1,59 @@
-from mazespace import Renderer
+import argparse
+import sys
+from mazespace import Project, load_config
+from mazespace.utils.persistence import save_session, load_session, load_defaults
 
-print("Initializing Mazespace Renderer...")
+def main():
+    parser = argparse.ArgumentParser(description="MazeSpace Arena - Configurable 3D Maze")
+    parser.add_argument("--config", help="Path to config yaml/json file", default=None)
+    parser.add_argument("--resume", action="store_true", help="Resume last session config")
+    parser.add_argument("--reset", action="store_true", help="Reset to defaults")
+    parser.add_argument("--headless", action="store_true", help="Run without UI")
+    
+    args = parser.parse_args()
+    
+    config = None
+    
+    # Load logic
+    if args.reset:
+        print("Resetting to defaults...")
+        config = load_defaults()
+        
+    elif args.resume:
+        print("Resuming last session...")
+        config = load_session()
+        if not config:
+            print("No session found. Loading defaults.")
+            config = load_defaults()
+            
+    elif args.config:
+        print(f"Loading config from {args.config}...")
+        try:
+            config = load_config(args.config)
+        except Exception as e:
+            print(f"Error loading config: {e}")
+            sys.exit(1)
+            
+    else:
+        # Default behavior: Try to resume, else defaults? 
+        # Request said: "loads the last-used settings OR defaults if none exist"
+        config = load_session()
+        if not config:
+            print("Loading defaults.")
+            config = load_defaults()
 
-# 1. Initialize the Renderer
-r = Renderer(width=800, height=600, bg_color=(0.1, 0.1, 0.1, 1.0))
+    # Run App
+    try:
+        app = Project(config=config, headless=args.headless)
+        app.run()
+        
+        # Save session on clean exit
+        if not args.headless:
+            save_session(app.config)
+            
+    except KeyboardInterrupt:
+        print("\nInterrupted.")
+        sys.exit(0)
 
-print("Adding shapes...")
-
-# 2. Add shapes
-# Center Drone
-r.draw(shape="drone", position=(0, 0, 0), color=(0.0, 1.0, 1.0))
-
-# Surrounding Objects
-r.draw(shape="cube", position=(5, 0, 5), color=(1.0, 0.3, 0.3))
-r.draw(shape="sphere", position=(-5, 2, -5), color=(0.5, 1.0, 0.5))
-r.draw(shape="crystal", position=(0, 3, 6), color=(0.8, 0.0, 1.0))
-
-print("Opening window... (Close window to exit)")
-
-# 3. Show the Window (This blocks until the window is closed)
-r.show()
-
-print("Done!")
+if __name__ == "__main__":
+    main()

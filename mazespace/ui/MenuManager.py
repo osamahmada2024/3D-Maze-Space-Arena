@@ -1,321 +1,245 @@
-# ui/MenuManager.py
 import pygame
 import sys
 import math
+from typing import List, Optional, Any
+from mazespace.config.definitions import GlobalConfig, ThemeConfig, AgentConfig
+
+class MenuState:
+    """Base class for menu states"""
+    def handle_input(self, event, manager) -> Optional['MenuState']:
+        return None
+    
+    def draw(self, screen, manager, t):
+        pass
+
+class SelectionState(MenuState):
+    """Generic selection menu"""
+    def __init__(self, title: str, subtitle: str, items: List[Any], next_state_factory=None):
+        self.title = title
+        self.subtitle = subtitle
+        self.items = items
+        self.cursor = 0
+        self.next_state_factory = next_state_factory # Function taking selected item, returning next state
+        
+    def handle_input(self, event, manager):
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP:
+                self.cursor = (self.cursor - 1) % len(self.items)
+            elif event.key == pygame.K_DOWN:
+                self.cursor = (self.cursor + 1) % len(self.items)
+            elif event.key == pygame.K_RETURN:
+                selected = self.items[self.cursor]
+                if self.next_state_factory:
+                    return self.next_state_factory(selected)
+                return selected # Return value (leaf)
+        return None
+
+    def draw(self, screen, manager, t):
+        # Draw Title
+        title_surf = manager.FONT.render(self.title, True, manager.WHITE)
+        screen.blit(title_surf, (manager.WIDTH//2 - title_surf.get_width()//2, 40))
+        
+        sub_surf = manager.FONT_TINY.render(self.subtitle, True, manager.GRAY)
+        screen.blit(sub_surf, (manager.WIDTH//2 - sub_surf.get_width()//2, 85))
+        
+        # Draw Items
+        start_y = 150
+        gap = 80
+        
+        for i, item in enumerate(self.items):
+            y = start_y + i * gap
+            
+            # Extract name/desc/key safely
+            name = getattr(item, 'name', str(item))
+            desc = getattr(item, 'desc', "")
+            
+            color = manager.WHITE
+            if i == self.cursor:
+                color = manager.YELLOW
+                manager.draw_cursor(100, y + 20, t)
+
+            txt = manager.FONT_SMALL.render(name, True, color)
+            screen.blit(txt, (140, y))
+            
+            if desc:
+                d_txt = manager.FONT_TINY.render(desc, True, manager.GRAY)
+                screen.blit(d_txt, (140, y + 25))
+
+class TextInputState(MenuState):
+    """Main menu with text command support"""
+    def __init__(self):
+        self.user_text = ""
+        self.options = ["Start Game", "Configure", "Exit"]
+        self.cursor = 0
+        
+    def handle_input(self, event, manager):
+        if event.type == pygame.KEYDOWN:
+            # Typed Input Handling
+            if event.key == pygame.K_BACKSPACE:
+                self.user_text = self.user_text[:-1]
+            elif event.key == pygame.K_RETURN:
+                cmd = self.user_text.strip().lower()
+                if cmd == "exit":
+                    sys.exit()
+                elif cmd == "return":
+                    if len(manager.stack) > 1:
+                        manager.pop_state()
+                        return None
+                elif cmd == "":
+                    # Normal menu selection
+                    if self.cursor == 0: # Start
+                        # Configure default flow
+                        # 1. Select Theme -> Select Agent -> Run
+                        def on_agent_select(agent):
+                            manager.config.app.default_agent = agent.key
+                            manager.finished = True # Signal to run app
+                            return None
+                            
+                        def on_theme_select(theme):
+                            manager.config.app.default_theme = theme.key
+                            return SelectionState(
+                                "Select Agent", "Choose your character",
+                                manager.config.agents,
+                                on_agent_select
+                            )
+
+                        return SelectionState(
+                            "Select Theme", "Choose your environment",
+                            manager.config.themes,
+                            on_theme_select
+                        )
+                    elif self.cursor == 1: # Configure
+                        # Just show theme selection for now as an example
+                         return SelectionState(
+                            "Configuration", "Review Settings",
+                             manager.config.themes,
+                             None
+                         )
+                    elif self.cursor == 2: # Exit
+                        sys.exit()
+                
+                self.user_text = "" # Reset if consumed (but usually we transition)
+                
+            else:
+                # Add unicode chars
+                if len(self.user_text) < 20 and event.unicode.isprintable():
+                    self.user_text += event.unicode
+            
+            # Nav arrows (only if text empty? mixed mode)
+            if event.key == pygame.K_UP:
+                self.cursor = (self.cursor - 1) % len(self.options)
+            elif event.key == pygame.K_DOWN:
+                self.cursor = (self.cursor + 1) % len(self.options)
+
+        return None
+        
+    def draw(self, screen, manager, t):
+        # Title
+        title = manager.FONT.render("MazeSpace Arena", True, manager.CYAN)
+        screen.blit(title, (manager.WIDTH//2 - title.get_width()//2, 60))
+        
+        # Options
+        for i, opt in enumerate(self.options):
+            color = manager.YELLOW if i == self.cursor else manager.WHITE
+            txt = manager.FONT.render(opt, True, color)
+            screen.blit(txt, (manager.WIDTH//2 - txt.get_width()//2, 200 + i * 60))
+            
+            if i == self.cursor:
+                manager.draw_cursor(manager.WIDTH//2 - 100, 200 + i * 60 + 15, t)
+
+        # Text Input Box
+        box_y = manager.HEIGHT - 100
+        txt_surf = manager.FONT_SMALL.render(f"Command > {self.user_text}_", True, manager.TEAL)
+        screen.blit(txt_surf, (50, box_y))
+        
+        hint = manager.FONT_TINY.render("Type 'return' or 'exit', or use Arrow Keys + Enter", True, manager.GRAY)
+        screen.blit(hint, (50, box_y + 40))
+
 
 class MenuManager:
-    def __init__(self):
+    def __init__(self, config: GlobalConfig):
         pygame.init()
-        self.WIDTH, self.HEIGHT = 900, 700  # ✅ زيادة الارتفاع قليلاً
-        self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
-        pygame.display.set_caption("3D Maze Arena - Agent & Algorithm Selection")
+        self.config = config
+        self.WIDTH = config.app.width
+        self.HEIGHT = config.app.height
+        
+        flags = pygame.DOUBLEBUF
+        if config.app.fullscreen:
+            flags |= pygame.FULLSCREEN
+            
+        self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT), flags)
+        pygame.display.set_caption("MazeSpace - Configurable")
+        
         self.clock = pygame.time.Clock()
+        self.stack: List[MenuState] = [TextInputState()]
+        self.finished = False
+
+        # Fonts & Colors
         self.FONT = pygame.font.Font(None, 42)
-        self.FONT_SMALL = pygame.font.Font(None, 30)
+        self.FONT_SMALL = pygame.font.Font(None, 32)
         self.FONT_TINY = pygame.font.Font(None, 22)
-
+        
         self.WHITE = (255, 255, 255)
-        self.TEAL = (0, 220, 200)
         self.GRAY = (120, 120, 120)
-        self.YELLOW = (255, 220, 90)
-        self.BLUE = (90, 170, 255)
-        self.CYAN = (100, 230, 255)
-        self.ORANGE = (255, 140, 50)  # ✅ جديد - للون الحمم
-
-        # Agent shapes with descriptions
-        self.agents = [
-            {"name": "Sphere Droid", "key": "sphere_droid", "desc": "Classic glowing orb"},
-            {"name": "Robo Cube", "key": "robo_cube", "desc": "Mechanical cube"},
-            {"name": "Mini Drone", "key": "mini_drone", "desc": "Flying quad-copter"},
-            {"name": "Crystal Alien", "key": "crystal_alien", "desc": "Mysterious gem entity"}
-        ]
-        
-        # ✅ تحديث الـ themes لإضافة LAVA
-        self.themes = [
-            {"name": "Standard (Space)", "key": "DEFAULT", "desc": "Classic sci-fi maze experience", "color": self.CYAN},
-            {"name": "Forest Maze", "key": "FOREST", "desc": "Atmospheric forest with fog and fireflies", "color": (100, 200, 100)},
-            {"name": "Lava Maze 🔥", "key": "LAVA", "desc": "Deadly volcanic maze with lava pools!", "color": self.ORANGE}  # ✅ جديد
-        ]
-        
-        self.algorithms = ["A* search", "Dijkstra", "DFS", "BFS"]
-        self.selected_agent = None
-        self.selected_theme = None
-        self.selected_algo = None
-        self.cursor_pos = 0
-        self.stage = 0
-        self.running = True
-
-    def draw_animated_gradient(self, t):
-        """Animated background gradient"""
-        for i in range(self.HEIGHT):
-            r = int(10 + 20 * math.sin(t + i/50))
-            g = int(15 + 20 * math.sin(t/1.5 + i/60))
-            b = int(25 + 20 * math.sin(t/2 + i/70))
-            r = max(0, min(255, r))
-            g = max(0, min(255, g))
-            b = max(0, min(255, b))
-            pygame.draw.line(self.screen, (r, g, b), (0, i), (self.WIDTH, i))
+        self.CYAN = (0, 255, 255)
+        self.TEAL = (0, 200, 180)
+        self.YELLOW = (255, 220, 50)
 
     def draw_cursor(self, x, y, t):
-        """Animated cursor"""
-        pulse = int((math.sin(t*5) + 1)/2 * 55)
-        color = (
-            min(255, self.TEAL[0] + pulse),
-            min(255, self.TEAL[1] + pulse),
-            min(255, self.TEAL[2] + pulse),
-        )
-        pygame.draw.circle(self.screen, color, (x, y), 10)
+        s = 5 + math.sin(t * 5) * 2
+        pygame.draw.circle(self.screen, self.TEAL, (x, y), s)
 
-    def draw_theme_icon(self, x, y, theme_key, size=40):
-        """✅ رسم أيقونة لكل theme"""
-        center_x, center_y = x + size//2, y + size//2
+    def push_state(self, state: MenuState):
+        self.stack.append(state)
         
-        if theme_key == "DEFAULT":
-            # نجوم للفضاء
-            pygame.draw.circle(self.screen, self.CYAN, (center_x, center_y), size//3, 2)
-            for i in range(5):
-                angle = i * (2 * math.pi / 5) - math.pi/2
-                px = center_x + int(size//2.5 * math.cos(angle))
-                py = center_y + int(size//2.5 * math.sin(angle))
-                pygame.draw.circle(self.screen, self.CYAN, (px, py), 3)
-                
-        elif theme_key == "FOREST":
-            # شجرة
-            pygame.draw.rect(self.screen, (139, 90, 43), (center_x-3, center_y, 6, size//2))
-            pygame.draw.polygon(self.screen, (34, 139, 34), [
-                (center_x, y),
-                (x + size, center_y + 5),
-                (x, center_y + 5)
-            ])
+    def pop_state(self):
+        if len(self.stack) > 1:
+            self.stack.pop()
             
-        elif theme_key == "LAVA":
-            # حمم/نار
-            pygame.draw.polygon(self.screen, self.ORANGE, [
-                (center_x, y),
-                (x + size - 5, y + size),
-                (x + 5, y + size)
-            ])
-            pygame.draw.polygon(self.screen, (255, 200, 50), [
-                (center_x, y + size//4),
-                (x + size - 12, y + size),
-                (x + 12, y + size)
-            ])
-
-    def draw_agent_icon(self, x, y, agent_type, size=40):
-        """Draw a simple icon representing each agent type"""
-        center_x, center_y = x + size//2, y + size//2
-        
-        if agent_type == "sphere_droid":
-            pygame.draw.circle(self.screen, self.CYAN, (center_x, center_y), size//2, 3)
-            pygame.draw.circle(self.screen, self.CYAN, (center_x, center_y), size//4)
-            
-        elif agent_type == "robo_cube":
-            rect = pygame.Rect(x, y, size, size)
-            pygame.draw.rect(self.screen, self.CYAN, rect, 3)
-            pygame.draw.line(self.screen, self.CYAN, (x, y), (x+size, y+size), 2)
-            pygame.draw.line(self.screen, self.CYAN, (x+size, y), (x, y+size), 2)
-            
-        elif agent_type == "mini_drone":
-            pygame.draw.line(self.screen, self.CYAN, (center_x-size//2, center_y), (center_x+size//2, center_y), 3)
-            pygame.draw.line(self.screen, self.CYAN, (center_x, center_y-size//2), (center_x, center_y+size//2), 3)
-            for px, py in [(x, y), (x+size, y), (x, y+size), (x+size, y+size)]:
-                pygame.draw.circle(self.screen, self.CYAN, (px, py), 8, 2)
-                
-        elif agent_type == "crystal_alien":
-            points = [
-                (center_x, y),
-                (x+size, center_y),
-                (center_x, y+size),
-                (x, center_y)
-            ]
-            pygame.draw.polygon(self.screen, self.CYAN, points, 3)
-            pygame.draw.line(self.screen, self.CYAN, (center_x, y), (center_x, y+size), 2)
-
-    def draw_menu(self, t):
-        """Main menu rendering"""
-        if self.stage == 0:
-            # Theme selection screen
-            title = self.FONT.render("Select Game Theme", True, self.WHITE)
-            self.screen.blit(title, (self.WIDTH//2 - title.get_width()//2, 40))
-            
-            subtitle = self.FONT_TINY.render("Choose your environment", True, self.GRAY)
-            self.screen.blit(subtitle, (self.WIDTH//2 - subtitle.get_width()//2, 85))
-
-            for i, theme in enumerate(self.themes):
-                y = 140 + i * 100  # ✅ تعديل المسافات
-                
-                # Highlight selected
-                if self.selected_theme == theme["key"]:
-                    box = pygame.Rect(80, y-10, self.WIDTH-160, 90)
-                    pygame.draw.rect(self.screen, (50, 60, 80), box, border_radius=10)
-                
-                # ✅ رسم أيقونة الـ theme
-                self.draw_theme_icon(100, y + 10, theme["key"], 45)
-                
-                # Theme name with color
-                txt_color = theme.get("color", self.WHITE) if self.selected_theme == theme["key"] else self.WHITE
-                txt = self.FONT.render(theme["name"], True, txt_color)
-                self.screen.blit(txt, (180, y + 5))
-                
-                # Description
-                desc_txt = self.FONT_SMALL.render(theme["desc"], True, self.GRAY)
-                self.screen.blit(desc_txt, (180, y + 40))
-                
-                # Cursor
-                if i == self.cursor_pos:
-                    self.draw_cursor(70, y + 35, t)
-            
-            # ✅ تحذير للـ Lava
-            if self.cursor_pos == 2:  # LAVA selected
-                warning = self.FONT_TINY.render("⚠️ Warning: Lava pools cause damage! Watch your health!", True, self.ORANGE)
-                self.screen.blit(warning, (self.WIDTH//2 - warning.get_width()//2, self.HEIGHT - 80))
-
-        elif self.stage == 1:
-            # Agent selection screen
-            title = self.FONT.render("Select Your Agent Shape", True, self.WHITE)
-            self.screen.blit(title, (self.WIDTH//2 - title.get_width()//2, 40))
-            
-            subtitle = self.FONT_TINY.render("Choose the visual appearance of your pathfinding agent", True, self.GRAY)
-            self.screen.blit(subtitle, (self.WIDTH//2 - subtitle.get_width()//2, 85))
-            
-            for i, agent in enumerate(self.agents):
-                y = 150 + i * 110
-                
-                # Highlight selected
-                if self.selected_agent == agent["key"]:
-                    box = pygame.Rect(80, y-10, self.WIDTH-160, 100)
-                    pygame.draw.rect(self.screen, (50, 60, 80), box, border_radius=10)
-                
-                # Draw icon
-                self.draw_agent_icon(100, y+10, agent["key"], 50)
-                
-                # Agent name
-                txt_color = self.YELLOW if self.selected_agent == agent["key"] else self.WHITE
-                txt = self.FONT.render(agent["name"], True, txt_color)
-                self.screen.blit(txt, (180, y+5))
-                
-                # Description
-                desc_txt = self.FONT_SMALL.render(agent["desc"], True, self.GRAY)
-                self.screen.blit(desc_txt, (180, y+40))
-                
-                # Cursor
-                if i == self.cursor_pos:
-                    self.draw_cursor(70, y+35, t)
-
-        elif self.stage == 2:
-            # Algorithm selection screen
-            title = self.FONT.render("Select Pathfinding Algorithm", True, self.WHITE)
-            self.screen.blit(title, (self.WIDTH//2 - title.get_width()//2, 40))
-            
-            subtitle = self.FONT_TINY.render("Choose how your agent finds its path through the maze", True, self.GRAY)
-            self.screen.blit(subtitle, (self.WIDTH//2 - subtitle.get_width()//2, 85))
-
-            algo_descriptions = {
-                "A* search": "Optimal & efficient - uses heuristics",
-                "Dijkstra": "Optimal - explores uniformly",
-                "DFS": "Depth-first - fast but not optimal",
-                "BFS": "Breadth-first - guarantees shortest path"
-            }
-
-            for i, algo in enumerate(self.algorithms):
-                y = 150 + i * 95
-                
-                # Highlight selected
-                if self.selected_algo == algo:
-                    box = pygame.Rect(80, y-10, self.WIDTH-160, 85)
-                    pygame.draw.rect(self.screen, (50, 60, 80), box, border_radius=10)
-                
-                # Algorithm name
-                txt_color = self.BLUE if self.selected_algo == algo else self.WHITE
-                txt = self.FONT.render(algo, True, txt_color)
-                self.screen.blit(txt, (120, y))
-                
-                # Description
-                desc_txt = self.FONT_SMALL.render(algo_descriptions[algo], True, self.GRAY)
-                self.screen.blit(desc_txt, (120, y+35))
-                
-                # Checkmark if selected
-                if self.selected_algo == algo:
-                    check = self.FONT.render("✔", True, self.YELLOW)
-                    self.screen.blit(check, (self.WIDTH - 100, y+10))
-                
-                # Cursor
-                if i == self.cursor_pos:
-                    self.draw_cursor(70, y+25, t)
-        
-        # ✅ عرض الاختيارات الحالية
-        if self.stage > 0:
-            selection_y = self.HEIGHT - 100
-            if self.selected_theme:
-                theme_name = next((t["name"] for t in self.themes if t["key"] == self.selected_theme), "")
-                sel_txt = self.FONT_TINY.render(f"Theme: {theme_name}", True, self.GRAY)
-                self.screen.blit(sel_txt, (20, selection_y))
-            
-            if self.selected_agent and self.stage > 1:
-                agent_name = next((a["name"] for a in self.agents if a["key"] == self.selected_agent), "")
-                sel_txt = self.FONT_TINY.render(f"Agent: {agent_name}", True, self.GRAY)
-                self.screen.blit(sel_txt, (20, selection_y + 20))
-        
-        # Instructions at bottom
-        if self.stage < 2:
-            inst = self.FONT_TINY.render("↑↓ Navigate | ENTER Select | ESC Exit", True, self.GRAY)
-        else:
-            inst = self.FONT_TINY.render("↑↓ Navigate | ENTER Confirm & Start | ESC Exit", True, self.GRAY)
-        self.screen.blit(inst, (self.WIDTH//2 - inst.get_width()//2, self.HEIGHT - 40))
-
     def run(self):
-        """Main menu loop"""
         t = 0
-        self.stage = 0
-        
-        while self.running:
+        while not self.finished and self.stack:
             t += 0.016
-            self.screen.fill(self.WHITE)
-            self.draw_animated_gradient(t)
+            self.screen.fill((20, 20, 30)) # Dark Blue BG
+            
+            # Gradient
+            for i in range(self.HEIGHT):
+                c = 20 + i // 20
+                pygame.draw.line(self.screen, (10, 10, min(50, c)), (0, i), (self.WIDTH, i))
 
+            current_state = self.stack[-1]
+            
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.running = False
-                    self.selected_agent = None
-                    self.selected_algo = None
-                    self.selected_theme = None
-
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        self.running = False
-                        self.selected_agent = None
-                        self.selected_algo = None
-                        self.selected_theme = None
-                        
-                    elif event.key == pygame.K_DOWN:
-                        self.cursor_pos += 1
-                        
-                    elif event.key == pygame.K_UP:
-                        self.cursor_pos -= 1
-                        
-                    # Wrap cursor
-                    if self.stage == 0:
-                        self.cursor_pos %= len(self.themes)
-                    elif self.stage == 1:
-                        self.cursor_pos %= len(self.agents)
+                    sys.exit()
+                
+                # Global Back
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    if len(self.stack) > 1:
+                        self.pop_state()
                     else:
-                        self.cursor_pos %= len(self.algorithms)
-
-                    if event.key == pygame.K_RETURN:
-                        if self.stage == 0:
-                            self.selected_theme = self.themes[self.cursor_pos]["key"]
-                            self.stage = 1
-                            self.cursor_pos = 0
-                        elif self.stage == 1:
-                            self.selected_agent = self.agents[self.cursor_pos]["key"]
-                            self.stage = 2
-                            self.cursor_pos = 0
-                        else:
-                            self.selected_algo = self.algorithms[self.cursor_pos]
-                            self.running = False
-
-            self.draw_menu(t)
+                        # Top level escape -> Confirm Exit?
+                        # For now just exit
+                        sys.exit()
+                    continue
+                
+                # State-specific input
+                next_state_or_result = current_state.handle_input(event, self)
+                
+                if isinstance(next_state_or_result, MenuState):
+                    self.push_state(next_state_or_result)
+                elif next_state_or_result is not None:
+                    # Generic input handling might return something else?
+                    pass
+            
+            current_state.draw(self.screen, self, t)
+            
+            # Overlay Back hint
+            if len(self.stack) > 1:
+                back = self.FONT_TINY.render("[ESC] Back", True, self.GRAY)
+                self.screen.blit(back, (20, 20))
+            
             pygame.display.flip()
             self.clock.tick(60)
-
-        pygame.quit()
+            
+        return self.config

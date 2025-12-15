@@ -1,4 +1,5 @@
-from .api import Renderer
-from .game import main as run_game
+from mazespace.core.project import Project
+from mazespace.config.loader import load_config
+from mazespace.api import Renderer
 
-__all__ = ["Renderer", "run_game"]
+__all__ = ["Project", "load_config", "Renderer"]

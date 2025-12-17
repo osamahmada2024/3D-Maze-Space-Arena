@@ -169,22 +169,60 @@ class Scene(ABC):
         )
 
     def _update_camera_follow(self):
-        """Smooth camera follow (shared between all scenes)"""
-        # Follow the first agent by default
-        target_agent = self.agents[0] if self.agents else self.agent
-        if not target_agent: return
+        """Dynamic camera to keep all active agents in view"""
+        if not self.agents: return
         
-        wx = (target_agent.position[0] - self.grid_size // 2) * self.cell_size
-        wy = target_agent.position[1]
-        wz = (target_agent.position[2] - self.grid_size // 2) * self.cell_size
+        # 1. Calculate Centroid (Average Position)
+        sum_x = sum_y = sum_z = 0
+        count = 0
         
-        # Smooth follow
-        smooth = CAMERA_SETTINGS["smooth_factor"]
+        # Find min/max bounds for zoom
+        min_x, max_x = float('inf'), float('-inf')
+        min_z, max_z = float('inf'), float('-inf')
+        
+        for agent in self.agents:
+            wx = (agent.position[0] - self.grid_size // 2) * self.cell_size
+            wy = agent.position[1]
+            wz = (agent.position[2] - self.grid_size // 2) * self.cell_size
+            
+            sum_x += wx
+            sum_y += wy
+            sum_z += wz
+            
+            min_x = min(min_x, wx)
+            max_x = max(max_x, wx)
+            min_z = min(min_z, wz)
+            max_z = max(max_z, wz)
+            count += 1
+            
+        if count == 0: return
+        
+        # Centroid
+        target_x = sum_x / count
+        target_y = sum_y / count
+        target_z = sum_z / count
+        
+        # 2. Calculate Zoom (Spread)
+        spread_x = max_x - min_x
+        spread_z = max_z - min_z
+        max_spread = max(spread_x, spread_z)
+        
+        # Base distance + spread factor
+        base_dist = 40.0 # Standard view
+        zoom_factor = 1.2
+        target_dist = base_dist + (max_spread * zoom_factor)
+        target_dist = min(150.0, max(30.0, target_dist)) # Clamp
+        
+        # Smooth transition
+        smooth = 0.05
         self.camera.target = [
-            self.camera.target[0] * (1 - smooth) + wx * smooth,
-            self.camera.target[1] * (1 - smooth) + wy * smooth,
-            self.camera.target[2] * (1 - smooth) + wz * smooth
+            self.camera.target[0] * (1 - smooth) + target_x * smooth,
+            self.camera.target[1] * (1 - smooth) + target_y * smooth,
+            self.camera.target[2] * (1 - smooth) + target_z * smooth
         ]
+        
+        # Smoothly adjust distance
+        self.camera.distance = self.camera.distance * (1 - smooth) + target_dist * smooth
 
     def _setup_view(self):
         """Setup OpenGL view matrix (shared)"""

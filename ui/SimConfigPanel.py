@@ -115,7 +115,8 @@ class Slider(UIElement):
 class SimConfigPanel:
     def __init__(self):
         pygame.init()
-        self.WIDTH, self.HEIGHT = 1000, 800
+        # Use a safe resolution
+        self.WIDTH, self.HEIGHT = 1024, 720
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Advanced Simulation Configuration")
         self.clock = pygame.time.Clock()
@@ -123,7 +124,7 @@ class SimConfigPanel:
         # Fonts - Adjusted sizes
         self.FONT_TITLE = pygame.font.Font(None, 42)
         self.FONT_HEADER = pygame.font.Font(None, 28) # Smaller
-        self.FONT_BODY = pygame.font.Font(None, 22)   # Smaller for buttons
+        self.FONT_BODY = pygame.font.Font(None, 24)   # Readable
         
         self.running = True
         
@@ -147,36 +148,58 @@ class SimConfigPanel:
             })
             
         self.elements = []
-        self.focus_index = -1 # -1 means no keyboard focus yet
+        self.focus_index = -1
         self._init_ui()
 
     def _init_ui(self):
         self.elements = []
         
+        # Dynamic Layout Constants (Percentages)
+        W, H = self.WIDTH, self.HEIGHT
+        
+        # Margins
+        MARGIN_X = int(W * 0.05)
+        
         # 1. Entropy Slider
-        # x, y, w, h
-        self.slider_entropy = Slider(250, 110, 400, 30, self.config["entropy"])
+        slider_y = int(H * 0.18)
+        self.slider_entropy = Slider(MARGIN_X, slider_y, int(W * 0.9), 30, self.config["entropy"])
         self.elements.append(self.slider_entropy)
         
         # 2. Target Dist Buttons
-        start_x = 250
+        dist_y = int(H * 0.28)
+        btn_w = int(W * 0.12)
+        btn_h = 40
+        start_x = int(W * 0.25)
+        gap = int(W * 0.02)
+        
         for i, opt in enumerate(self.dist_options):
             btn = Button(
-                start_x + i * 130, 160, 110, 40, 
+                start_x + i * (btn_w + gap), dist_y, btn_w, btn_h, 
                 opt, self.FONT_BODY, 
                 lambda o=opt: self._set_dist(o),
                 color_key="accent" if self.config["target_dist"] == opt else "panel"
             )
             self.elements.append(btn)
             
-        # 3. Agents
-        start_y = 280
+        # 3. Agents List
+        agents_start_y = int(H * 0.40)
+        row_h = int(H * 0.11)
+        
+        # Column X positions
+        col_act_x = MARGIN_X
+        # col_name_x = MARGIN_X + 60 (Label, simplified)
+        col_algo_x = int(W * 0.25)
+        col_shape_x = int(W * 0.55)
+        
+        algo_w = int(W * 0.25)
+        shape_w = int(W * 0.25)
+        
         for i in range(4):
-            y = start_y + i * 90
+            y = agents_start_y + i * row_h
             
             # Active Toggle
             btn_act = Button(
-                50, y+10, 40, 40, 
+                col_act_x, y + 10, 50, 50, 
                 "✔" if self.config["agents"][i]["active"] else "X",
                 self.FONT_HEADER,
                 lambda idx=i: self._toggle_agent(idx),
@@ -190,7 +213,7 @@ class SimConfigPanel:
             # Algo Cycle
             curr_algo = self.algorithms[self.config["agents"][i]["algo_index"]]
             btn_algo = Button(
-                230, y+10, 200, 40,
+                col_algo_x, y + 10, algo_w, 50,
                 f"Algo: {curr_algo}",
                 self.FONT_BODY,
                 lambda idx=i: self._cycle_algo(idx)
@@ -200,7 +223,7 @@ class SimConfigPanel:
             # Shape Cycle
             curr_shape = self.shapes[self.config["agents"][i]["shape_index"]]
             btn_shape = Button(
-                450, y+10, 200, 40,
+                col_shape_x, y + 10, shape_w, 50,
                 f"Shape: {curr_shape}",
                 self.FONT_BODY,
                 lambda idx=i: self._cycle_shape(idx)
@@ -208,8 +231,10 @@ class SimConfigPanel:
             self.elements.append(btn_shape)
             
         # 4. Start Button
+        start_btn_w = int(W * 0.2)
+        start_btn_h = int(H * 0.08)
         self.btn_start = Button(
-            self.WIDTH - 220, self.HEIGHT - 80, 180, 50, 
+            W - start_btn_w - MARGIN_X, H - start_btn_h - 30, start_btn_w, start_btn_h, 
             "START ENGINE", self.FONT_HEADER, 
             self._start_sim, 
             "success"
@@ -241,27 +266,11 @@ class SimConfigPanel:
         self.running = False
         
     def _refresh_ui_state(self):
-        # Re-init UI to reflect text/color changes but keep focus/values
-        # Simple hack: preserve focus index
-        pass # Actually simple state update in draw/update is better for text changes
-        # Update text for existing buttons
-        
-        # Entropy
-        self.config["entropy"] = self.slider_entropy.value
-        
-        # Dist buttons
-        # Mapping index based on dist_options order
-        # Elements 1, 2, 3 are dist buttons
-        for i, opt in enumerate(self.dist_options):
-             btn = self.elements[1+i]
-             is_sel = self.config["target_dist"] == opt
-             btn.color_key = "accent" if is_sel else "panel"
-        
-        # Agents: this is tricky because elements list changes size if active/inactive toggles
-        # For full "smooth" support, we should completely rebuild the list on structure change
-        # checking if we destroyed the focused element.
-        
         prev_focus_idx = self.focus_index
+        
+        # Capture slider value
+        self.config["entropy"] = self.elements[0].value
+        
         self._init_ui()
         
         # Clamp focus
@@ -272,7 +281,6 @@ class SimConfigPanel:
             
         # Restore slider value
         self.elements[0].value = self.config["entropy"]
-
 
     def handle_input(self):
         mouse_pos = pygame.mouse.get_pos()
@@ -314,7 +322,6 @@ class SimConfigPanel:
             
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
-                    # Check UI clicks
                     clicked = False
                     for i, elem in enumerate(self.elements):
                         if elem.rect.collidepoint(mouse_pos):
@@ -324,13 +331,11 @@ class SimConfigPanel:
                                 rebuild_needed = True
                             if isinstance(elem, Slider):
                                 elem.dragging = True
-                                # update immediate
                                 rel_x = mouse_pos[0] - elem.rect.x
                                 elem.value = max(0.0, min(1.0, rel_x / elem.rect.width))
                                 self.config["entropy"] = elem.value
                             clicked = True
                             break
-                    
                     if not clicked:
                         self.focus_index = -1
                         
@@ -340,7 +345,6 @@ class SimConfigPanel:
                         if isinstance(elem, Slider):
                             elem.dragging = False
                             
-        # Continuous mouse updates
         for i, elem in enumerate(self.elements):
             elem.hovered = elem.rect.collidepoint(mouse_pos)
             elem.focused = (i == self.focus_index)
@@ -357,29 +361,44 @@ class SimConfigPanel:
 
     def draw(self):
         self.screen.fill(COLORS["bg"])
+        W, H = self.WIDTH, self.HEIGHT
+        MARGIN_X = int(W * 0.05)
         
         # --- Header ---
         title = self.FONT_TITLE.render("Simulation Configuration", True, COLORS["accent"])
-        self.screen.blit(title, (50, 30))
+        self.screen.blit(title, (MARGIN_X, int(H * 0.05)))
         
-        # --- Labels (Static) ---
-        pygame.draw.line(self.screen, COLORS["border"], (50, 80), (self.WIDTH-50, 80), 2)
+        # --- Separator ---
+        sep_y = int(H * 0.12)
+        pygame.draw.line(self.screen, COLORS["border"], (MARGIN_X, sep_y), (W-MARGIN_X, sep_y), 2)
         
+        # --- Labels ---
+        # Entropy
+        ent_y = int(H * 0.14)
         lbl_ent = self.FONT_HEADER.render(f"Obstacle Density: {int(self.config['entropy']*100)}%", True, COLORS["text"])
-        self.screen.blit(lbl_ent, (50, 115))
+        self.screen.blit(lbl_ent, (MARGIN_X, ent_y))
         
+        # Distance
+        dist_y = int(H * 0.24)
         lbl_dist = self.FONT_HEADER.render("Goal Distance:", True, COLORS["text"])
-        self.screen.blit(lbl_dist, (50, 170))
+        self.screen.blit(lbl_dist, (MARGIN_X, dist_y))
         
-        pygame.draw.line(self.screen, COLORS["border"], (50, 220), (self.WIDTH-50, 220), 2)
+        # Separator 2
+        sep2_y = int(H * 0.35)
+        pygame.draw.line(self.screen, COLORS["border"], (MARGIN_X, sep2_y), (W-MARGIN_X, sep2_y), 2)
+        
+        # Agents Header
+        agents_head_y = int(H * 0.37)
         lbl_agents = self.FONT_TITLE.render("Agents Setup", True, COLORS["accent"])
-        self.screen.blit(lbl_agents, (50, 235))
+        self.screen.blit(lbl_agents, (MARGIN_X, agents_head_y))
         
-        start_y = 280
-        for i, agent in enumerate(self.config["agents"]):
-            y = start_y + i * 90
+        # Agent Labels (Row headers)
+        agents_start_y = int(H * 0.40)
+        row_h = int(H * 0.11)
+        for i in range(4):
+            y = agents_start_y + i * row_h
             idx_txt = self.FONT_HEADER.render(f"Agent {i+1}", True, COLORS["text"])
-            self.screen.blit(idx_txt, (110, y+18))
+            self.screen.blit(idx_txt, (MARGIN_X + 70, y + 25))
         
         # --- Dynamic Elements ---
         for elem in self.elements:

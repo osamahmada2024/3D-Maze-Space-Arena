@@ -7,7 +7,54 @@ from ui.MenuManager import MenuManager
 from forest.forest_scene import ForestScene
 
 # Screen configuration
-WIDTH, HEIGHT = 1200, 800
+WIDTH, HEIGHT = 1024, 720
+
+# Helper for robust GL setup
+def create_opengl_display(w, h, title):
+    """Attempts to create OpenGL display with fallback configs"""
+    configs = [
+        {"multisample": True, "samples": 4, "depth": 24}, # High End
+        {"multisample": True, "samples": 2, "depth": 16}, # Mid Range
+        {"multisample": False, "samples": 0, "depth": 16}, # Low End
+        {"multisample": False, "samples": 0, "depth": 0},  # Potato / Safe (Let driver decide)
+    ]
+    
+    for i, conf in enumerate(configs):
+        try:
+            # Full tear-down to clear any stuck states
+            if pygame.get_init():
+                pygame.quit()
+            
+            pygame.init()
+            
+            # Set attributes
+            if conf["multisample"]:
+                pygame.display.gl_set_attribute(pygame.GL_MULTISAMPLEBUFFERS, 1)
+                pygame.display.gl_set_attribute(pygame.GL_MULTISAMPLESAMPLES, conf["samples"])
+            else:
+                pygame.display.gl_set_attribute(pygame.GL_MULTISAMPLEBUFFERS, 0)
+                
+            if conf["depth"] > 0:
+                pygame.display.gl_set_attribute(pygame.GL_DEPTH_SIZE, conf["depth"])
+            
+            # Common stable attributes
+            pygame.display.gl_set_attribute(pygame.GL_RED_SIZE, 8)
+            pygame.display.gl_set_attribute(pygame.GL_GREEN_SIZE, 8)
+            pygame.display.gl_set_attribute(pygame.GL_BLUE_SIZE, 8)
+            pygame.display.gl_set_attribute(pygame.GL_ALPHA_SIZE, 8)
+            pygame.display.gl_set_attribute(pygame.GL_BUFFER_SIZE, 32)
+            
+            screen = pygame.display.set_mode((w, h), pygame.DOUBLEBUF | pygame.OPENGL)
+            pygame.display.set_caption(title)
+            print(f"GL Context created with config: {conf}")
+            return screen, pygame.time.Clock()
+            
+        except pygame.error as e:
+            print(f"Config {i} failed: {e}")
+            continue
+            
+    print("CRITICAL: Failed to create ANY OpenGL context.")
+    sys.exit(1)
 
 def main():
     while True: # Restart loop
@@ -27,20 +74,20 @@ def main():
         config_panel = SimConfigPanel()
         config_data = config_panel.run()
         
-        # 🔥 Ensure cleanup after 2D panels
-        pygame.quit()
+        # 🔥 Cleanup after 2D panels
+        pygame.display.quit()
         
         if not config_data:
             print("Configuration cancelled. Exiting...")
             break
             
         print(f"Config: {config_data}")
+        
+        # Short pause
+        time.sleep(0.5)
 
-        # 3. Initialize Game
-        pygame.init() # Re-init for OpenGL
-        screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.DOUBLEBUF | pygame.OPENGL)
-        pygame.display.set_caption(f"3D Maze - {selected_theme} Edition")
-        clock = pygame.time.Clock()
+        # 3. Initialize Game (Robust)
+        screen, clock = create_opengl_display(WIDTH, HEIGHT, f"3D Maze - {selected_theme} Edition")
 
         current_scene = None
         
@@ -51,49 +98,36 @@ def main():
             current_scene = LavaMazeScene(WIDTH, HEIGHT)
         else:  # DEFAULT (Space)
             from rendering.SpaceScene import SpaceScene
-            # SpaceScene init requires shape/algo but we will override with add_agent loops
-            # We pass defaults to satisfy constructor
             current_scene = SpaceScene("sphere_droid", "astar", WIDTH, HEIGHT)
 
         # Initialize Scene with Config
-        # First, standard init (might create default agent, we can clear it or ignore it)
-        # Actually initialize returns the agent.
-        # We need a clean way to inject our agents.
-        
-        # Call initialize, passing the first agent's config as 'default' if needed, 
-        # or rely on add_agent iteration.
-        # But initialize calls _create_agent.
-        # Let's call initialize with first agent params (legacy compat)
+        if not config_data["agents"]:
+            print("No active agents configured!")
+            continue
+
+        # Use first agent's config as default for the scene init logic
         first_agent_conf = config_data["agents"][0]
-        
-        # Monkey patch or modify args
-        # But initialize takes (agent_shape, algo_name)
-        # We can just call it.
-        # SpaceScene.initialize() no args? 
-        # SpaceScene.initialize() takes no args but uses self.agent_shape
-        
-        # Let's update the scene properties before init
         current_scene.agent_shape = first_agent_conf["shape"]
         current_scene.algo_name = first_agent_conf["algo_name"]
+
+        # 🟢 Inject Entropy Logic
+        from config import settings
+        settings.GRID_SETTINGS["obstacle_prob_space"] = config_data["entropy"]
+        settings.GRID_SETTINGS["obstacle_prob_forest"] = config_data["entropy"]
+        settings.GRID_SETTINGS["obstacle_prob_lava"] = config_data["entropy"]
 
         # Run initialize
         current_scene.initialize()
         
-        # NOW, clear if we want, or use the one created.
-        # The one created used the properties of agent[0].
-        # We need to create the rest.
+        # 🟡 CRITICAL FIX: Clear agents to prevent duplication and ensure config adherence
+        current_scene.agents = [] 
+        current_scene.agent = None
         
-        # agent[0] is already created (as self.agent and self.agents[0]).
-        # Let's create the others.
+        # Re-create all agents from config
+        start_pos = (0, 0)
+        goal_pos = (current_scene.grid_size - 1, current_scene.grid_size - 1)
         
-        # Note: SpaceScene.initialize calls _create_agent -> add_agent.
-        # So agent[0] is in self.agents[0].
-        
-        start_pos = current_scene.agents[0].start
-        goal_pos = current_scene.agents[0].goal
-        
-        for i in range(1, len(config_data["agents"])):
-            conf = config_data["agents"][i]
+        for i, conf in enumerate(config_data["agents"]):
             current_scene.add_agent(start_pos, goal_pos, agent_config={
                 "algo_name": conf["algo_name"],
                 "shape": conf["shape"],
@@ -126,11 +160,6 @@ def main():
             
             # Check completion
             if hasattr(current_scene, 'is_finished') and current_scene.is_finished:
-                # Wait a bit or prompt?
-                # Just exit game loop to show results
-                # Give it a second or just break?
-                # Let's break after 2 seconds?
-                # For now break immediate to show Dashboard
                 simulation_complete = True
                 running = False
                 
@@ -145,7 +174,7 @@ def main():
             res = dashboard.run()
             
             # 🔥 Cleanup after dashboard
-            pygame.quit()
+            pygame.display.quit()
             
             if res == "QUIT":
                 break

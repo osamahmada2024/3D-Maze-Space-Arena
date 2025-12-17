@@ -6,7 +6,7 @@ import math
 class MenuManager:
     def __init__(self):
         pygame.init()
-        self.WIDTH, self.HEIGHT = 900, 700  # ✅ زيادة الارتفاع قليلاً
+        self.WIDTH, self.HEIGHT = 1024, 720  # Safe Resolution
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("3D Maze Arena - Agent & Algorithm Selection")
         self.clock = pygame.time.Clock()
@@ -170,97 +170,8 @@ class MenuManager:
                 warning = self.FONT_TINY.render("⚠️ Warning: Lava pools cause damage! Watch your health!", True, self.ORANGE)
                 self.screen.blit(warning, (self.WIDTH//2 - warning.get_width()//2, self.HEIGHT - 80))
 
-        elif self.stage == 1:
-            # Agent selection screen
-            title = self.FONT.render("Select Your Agent Shape", True, self.WHITE)
-            self.screen.blit(title, (self.WIDTH//2 - title.get_width()//2, 40))
-            
-            subtitle = self.FONT_TINY.render("Choose the visual appearance of your pathfinding agent", True, self.GRAY)
-            self.screen.blit(subtitle, (self.WIDTH//2 - subtitle.get_width()//2, 85))
-            
-            for i, agent in enumerate(self.agents):
-                y = 150 + i * 110
-                
-                # Highlight selected
-                if self.selected_agent == agent["key"]:
-                    box = pygame.Rect(80, y-10, self.WIDTH-160, 100)
-                    pygame.draw.rect(self.screen, (50, 60, 80), box, border_radius=10)
-                
-                # Draw icon
-                self.draw_agent_icon(100, y+10, agent["key"], 50)
-                
-                # Agent name
-                txt_color = self.YELLOW if self.selected_agent == agent["key"] else self.WHITE
-                txt = self.FONT.render(agent["name"], True, txt_color)
-                self.screen.blit(txt, (180, y+5))
-                
-                # Description
-                desc_txt = self.FONT_SMALL.render(agent["desc"], True, self.GRAY)
-                self.screen.blit(desc_txt, (180, y+40))
-                
-                # Cursor
-                if i == self.cursor_pos:
-                    self.draw_cursor(70, y+35, t)
-
-        elif self.stage == 2:
-            # Algorithm selection screen
-            title = self.FONT.render("Select Pathfinding Algorithm", True, self.WHITE)
-            self.screen.blit(title, (self.WIDTH//2 - title.get_width()//2, 40))
-            
-            subtitle = self.FONT_TINY.render("Choose how your agent finds its path through the maze", True, self.GRAY)
-            self.screen.blit(subtitle, (self.WIDTH//2 - subtitle.get_width()//2, 85))
-
-            algo_descriptions = {
-                "A* search": "Optimal & efficient - uses heuristics",
-                "Dijkstra": "Optimal - explores uniformly",
-                "DFS": "Depth-first - fast but not optimal",
-                "BFS": "Breadth-first - guarantees shortest path"
-            }
-
-            for i, algo in enumerate(self.algorithms):
-                y = 150 + i * 95
-                
-                # Highlight selected
-                if self.selected_algo == algo:
-                    box = pygame.Rect(80, y-10, self.WIDTH-160, 85)
-                    pygame.draw.rect(self.screen, (50, 60, 80), box, border_radius=10)
-                
-                # Algorithm name
-                txt_color = self.BLUE if self.selected_algo == algo else self.WHITE
-                txt = self.FONT.render(algo, True, txt_color)
-                self.screen.blit(txt, (120, y))
-                
-                # Description
-                desc_txt = self.FONT_SMALL.render(algo_descriptions[algo], True, self.GRAY)
-                self.screen.blit(desc_txt, (120, y+35))
-                
-                # Checkmark if selected
-                if self.selected_algo == algo:
-                    check = self.FONT.render("✔", True, self.YELLOW)
-                    self.screen.blit(check, (self.WIDTH - 100, y+10))
-                
-                # Cursor
-                if i == self.cursor_pos:
-                    self.draw_cursor(70, y+25, t)
-        
-        # ✅ عرض الاختيارات الحالية
-        if self.stage > 0:
-            selection_y = self.HEIGHT - 100
-            if self.selected_theme:
-                theme_name = next((t["name"] for t in self.themes if t["key"] == self.selected_theme), "")
-                sel_txt = self.FONT_TINY.render(f"Theme: {theme_name}", True, self.GRAY)
-                self.screen.blit(sel_txt, (20, selection_y))
-            
-            if self.selected_agent and self.stage > 1:
-                agent_name = next((a["name"] for a in self.agents if a["key"] == self.selected_agent), "")
-                sel_txt = self.FONT_TINY.render(f"Agent: {agent_name}", True, self.GRAY)
-                self.screen.blit(sel_txt, (20, selection_y + 20))
-        
         # Instructions at bottom
-        if self.stage < 2:
-            inst = self.FONT_TINY.render("↑↓ Navigate | ENTER Select | ESC Exit", True, self.GRAY)
-        else:
-            inst = self.FONT_TINY.render("↑↓ Navigate | ENTER Confirm & Start | ESC Exit", True, self.GRAY)
+        inst = self.FONT_TINY.render("↑↓ Navigate | ENTER Select | ESC Exit", True, self.GRAY)
         self.screen.blit(inst, (self.WIDTH//2 - inst.get_width()//2, self.HEIGHT - 40))
 
     def run(self):
@@ -302,17 +213,9 @@ class MenuManager:
                         self.cursor_pos %= len(self.algorithms)
 
                     if event.key == pygame.K_RETURN:
-                        if self.stage == 0:
-                            self.selected_theme = self.themes[self.cursor_pos]["key"]
-                            self.stage = 1
-                            self.cursor_pos = 0
-                        elif self.stage == 1:
-                            self.selected_agent = self.agents[self.cursor_pos]["key"]
-                            self.stage = 2
-                            self.cursor_pos = 0
-                        else:
-                            self.selected_algo = self.algorithms[self.cursor_pos]
-                            self.running = False
+                        # Only Theme Selection
+                        self.selected_theme = self.themes[self.cursor_pos]["key"]
+                        self.running = False
 
             self.draw_menu(t)
             pygame.display.flip()

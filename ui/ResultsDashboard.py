@@ -37,8 +37,8 @@ class ResultsDashboard:
         
         h_rank = self.FONT_SMALL.render("Rank", True, self.WHITE)
         h_algo = self.FONT_SMALL.render("Algorithm", True, self.WHITE)
-        h_steps = self.FONT_SMALL.render("Steps (Efficiency)", True, self.WHITE)
-        h_time = self.FONT_SMALL.render("Time (Compute Speed)", True, self.WHITE)
+        h_steps = self.FONT_SMALL.render("Steps (Travel)", True, self.WHITE)
+        h_time = self.FONT_SMALL.render("Compute (ms)", True, self.WHITE)
         
         self.screen.blit(h_rank, (60, headers_y))
         self.screen.blit(h_algo, (150, headers_y))

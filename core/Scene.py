@@ -295,6 +295,8 @@ class Scene(ABC):
                 print("🏁 Consensus: All agents have finished (Success or Fail).")
                 self._all_finished_printed = True
                 self.is_finished = True
+                # Stop theme music when simulation ends
+                pygame.mixer.music.stop()
 
     # ==========================================================================
     # Abstract methods (must be implemented by subclasses)

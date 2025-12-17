@@ -116,7 +116,9 @@ class Agent:
 
     def next_target(self):
         if self.path_i >= len(self.path):
-            return None, None # End of path
+            # If path exhausted but not at goal, return goal as target
+            # This fixes "Stopping 1 step short" if path didn't include goal
+            return self.goal
         return self.path[self.path_i]
 
     def reached_goal(self):
@@ -124,10 +126,13 @@ class Agent:
         dx = self.position[0] - self.goal[0]
         dz = self.position[2] - self.goal[1]
         dist_to_goal = math.sqrt(dx*dx + dz*dz)
-        return dist_to_goal < 0.5
+        # Tight threshold to ensure move() completes the step increment before finishing
+        return dist_to_goal < 0.01
 
     def _mark_arrival(self):
         if not self.arrived:
             self.arrived = True
+            # Snap to exact goal pos
+            self.position = (float(self.goal[0]), 0.3, float(self.goal[1]))
             self.travel_finish_time = time.time()
             self.travel_time = self.travel_finish_time - self.travel_start_time

@@ -50,6 +50,14 @@ class Scene(ABC):
         self.start_time = 0
         self.game_active = False
         self.is_finished = False
+        self.zoom_offset = 0.0 # Manual zoom control
+
+    def handle_event(self, event):
+        """Handle specific input events"""
+        if event.type == pygame.MOUSEWHEEL:
+            # Zoom In/Out
+            self.zoom_offset -= event.y * 2.0
+            self.zoom_offset = max(-20.0, min(50.0, self.zoom_offset))
 
     def _create_grid(self, obstacle_prob: float):
         """Create maze grid with pathfinding"""
@@ -208,10 +216,11 @@ class Scene(ABC):
         max_spread = max(spread_x, spread_z)
         
         # Base distance + spread factor
-        base_dist = 40.0 # Standard view
-        zoom_factor = 1.2
-        target_dist = base_dist + (max_spread * zoom_factor)
-        target_dist = min(150.0, max(30.0, target_dist)) # Clamp
+        base_dist = 30.0 # Closer standard view
+        zoom_factor = 0.8 # Tighter fit
+        
+        target_dist = base_dist + (max_spread * zoom_factor) + self.zoom_offset
+        target_dist = min(200.0, max(15.0, target_dist)) # Wider clamp, but allow close-up
         
         # Smooth transition
         smooth = 0.05
@@ -228,7 +237,7 @@ class Scene(ABC):
         """Setup OpenGL view matrix (shared)"""
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        gluPerspective(60, self.width / self.height, 0.1, 100.0)
+        gluPerspective(60, self.width / self.height, 0.1, 500.0) # Increased zFar to prevent clipping
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 

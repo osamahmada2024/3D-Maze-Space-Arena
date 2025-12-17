@@ -125,7 +125,22 @@ def main():
         
         # Re-create all agents from config
         start_pos = (0, 0)
-        goal_pos = (current_scene.grid_size - 1, current_scene.grid_size - 1)
+        
+        # Determine Goal Logic
+        dist_setting = config_data.get("target_dist", "Far")
+        grid_sz = current_scene.grid_size
+        
+        if dist_setting == "Near":
+             # 25% across
+             goal_pos = (grid_sz // 4, grid_sz // 4)
+        elif dist_setting == "Medium":
+             # 50% across (approx)
+             goal_pos = (grid_sz // 2, grid_sz // 2)
+        else: # Far
+             goal_pos = (grid_sz - 1, grid_sz - 1)
+
+        # Sanity check goal position
+        current_scene.grid[goal_pos[1]][goal_pos[0]] = 0 # Ensure clear
         
         for i, conf in enumerate(config_data["agents"]):
             current_scene.add_agent(start_pos, goal_pos, agent_config={
@@ -151,6 +166,10 @@ def main():
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         running = False
+                
+                # Pass events to scene (e.g., zoom)
+                if current_scene:
+                    current_scene.handle_event(event)
             
             # Scene Update
             current_scene.update(dt)

@@ -238,30 +238,34 @@ class PathfindingEngine:
         return []
 
     def ids(self, start: Tuple[int,int], goal: Tuple[int,int]) -> Optional[List[Tuple[int,int]]]:
-        """Iterative Deepening Search"""
+        """Iterative Deepening Search (Optimized to prevent freeze)"""
         def dls(node, depth, path, visited_cycle):
-            if depth == 0 and node == goal:
+            if node == goal:
                 return path
-            if depth > 0:
-                if node == goal:
-                    return path
-                
-                for neighbor in self.utils.neighbors(*node):
-                    if neighbor not in visited_cycle:
-                        visited_cycle.add(neighbor)
-                        res = dls(neighbor, depth-1, path + [neighbor], visited_cycle)
-                        visited_cycle.remove(neighbor)
-                        if res:
-                            return res
+            if depth == 0:
+                return None
+            
+            for neighbor in self.utils.neighbors(*node):
+                if neighbor not in visited_cycle:
+                    visited_cycle.add(neighbor)
+                    res = dls(neighbor, depth-1, path + [neighbor], visited_cycle)
+                    visited_cycle.remove(neighbor)
+                    if res:
+                        return res
             return None
 
-        # Limit depth to avoid infinite loops if no path
-        max_depth = self.rows * self.cols  # Worst case
-        for d in range(max_depth):
-            # Visited set for cycle prevention in current path branch
+        # Limit depth to prevent exponential explosion
+        # Use Manhattan distance as heuristic for max reasonable depth
+        manhattan = abs(start[0] - goal[0]) + abs(start[1] - goal[1])
+        max_depth = min(manhattan * 3, 100)  # Cap at 100 to prevent freeze
+        
+        for d in range(1, max_depth + 1):
             res = dls(start, d, [start], {start})
             if res:
                 return res
+        
+        # If no path found within reasonable depth, return empty
+        print(f"⚠️ IDS: No path found within depth {max_depth}")
         return []
 
     def find_path(self, start: Tuple[int,int], goal: Tuple[int,int], algo: str) -> Optional[List[Tuple[int,int]]]:

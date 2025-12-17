@@ -280,7 +280,7 @@ class Scene(ABC):
         for agent in self.agents:
             if agent.arrived:
                 if not hasattr(agent, '_victory_printed'):
-                    print(f"🎉 Agent ({agent.algo_name}) reached goal! Steps: {agent.steps_taken}, Time: {agent.execution_time:.2f}ms")
+                    print(f"🎉 Agent ({agent.algo_name}) reached goal! Steps: {agent.steps_taken}, Time: {agent.travel_time:.2f}s")
                     agent._victory_printed = True
             else:
                 all_arrived = False

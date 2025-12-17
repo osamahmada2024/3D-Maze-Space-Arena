@@ -14,6 +14,11 @@ class Agent:
         self.algo_name = algo_name
         self.execution_time = execution_time
         
+        # ✨ Timing (Seconds)
+        self.travel_start_time = None
+        self.travel_finish_time = None
+        self.travel_time = 0.0
+        
         self.path_i = 0                 
         self.position = (float(start[0]), 0.3, float(start[1]))
         self.steps_taken = 0
@@ -25,18 +30,23 @@ class Agent:
         self.history = deque(maxlen=trail_length)
         
         self.arrived = False
+        self.stuck = False # NEW: Track if path complete but goal not reached
         
         # ✨ تخزين آخر موقع لتجنب إضافة نقاط مكررة
         self._last_history_pos = None
-        self._history_min_dist = 0.05  # الحد الأدنى للمسافة بين النقاط
+        self._history_min_dist = 0.05
 
     def update(self, dt):
-        if self.arrived:
+        # Start timer on first update
+        if self.travel_start_time is None:
+            self.travel_start_time = time.time()
+            
+        if self.arrived or self.stuck:
             return
 
         self.move(dt)
 
-        # ✨ إضافة للـ history فقط إذا تحرك مسافة كافية
+        # ✨ إضافة للـ history
         if self._last_history_pos is None:
             self.history.append(self.position)
             self._last_history_pos = self.position
@@ -51,10 +61,15 @@ class Agent:
 
     def move(self, dt):
         if self.reached_goal():
-            self.arrived = True
+            self._mark_arrival()
             return
 
         tx, ty = self.next_target()
+        
+        # If no more targets but not reached goal -> Stuck
+        if tx is None:
+            self.stuck = True
+            return
 
         x, _, z = self.position
         dx = tx - x
@@ -70,7 +85,7 @@ class Agent:
                 self.visited_cells.add(self.path[self.path_i])
 
             if self.reached_goal():
-                self.arrived = True
+                self._mark_arrival()
             return
 
         step = self.speed * dt
@@ -94,14 +109,24 @@ class Agent:
             if self.path_i < len(self.path):
                 self.visited_cells.add(self.path[self.path_i])
             if self.reached_goal():
-                self.arrived = True
+                self._mark_arrival()
         else:
             self.position = (float(nx), 0.3, float(nz))
 
     def next_target(self):
         if self.path_i >= len(self.path):
-            return self.goal
+            return None, None # End of path
         return self.path[self.path_i]
 
     def reached_goal(self):
-        return self.path_i >= len(self.path)
+        # Strict validation: Must be physically close to GOAL
+        dx = self.position[0] - self.goal[0]
+        dz = self.position[2] - self.goal[1]
+        dist_to_goal = math.sqrt(dx*dx + dz*dz)
+        return dist_to_goal < 0.5
+
+    def _mark_arrival(self):
+        if not self.arrived:
+            self.arrived = True
+            self.travel_finish_time = time.time()
+            self.travel_time = self.travel_finish_time - self.travel_start_time

@@ -38,7 +38,7 @@ class ResultsDashboard:
         h_rank = self.FONT_SMALL.render("Rank", True, self.WHITE)
         h_algo = self.FONT_SMALL.render("Algorithm", True, self.WHITE)
         h_steps = self.FONT_SMALL.render("Steps (Travel)", True, self.WHITE)
-        h_time = self.FONT_SMALL.render("Compute (ms)", True, self.WHITE)
+        h_time = self.FONT_SMALL.render("Time (s)", True, self.WHITE)
         
         self.screen.blit(h_rank, (60, headers_y))
         self.screen.blit(h_algo, (150, headers_y))
@@ -66,7 +66,7 @@ class ResultsDashboard:
             self.screen.blit(steps_txt, (420, y))
             
             # Time
-            time_str = f"{agent.execution_time:.2f}ms"
+            time_str = f"{agent.travel_time:.2f}s"
             time_txt = self.FONT_SMALL.render(time_str, True, self.TEAL)
             self.screen.blit(time_txt, (620, y+5))
             

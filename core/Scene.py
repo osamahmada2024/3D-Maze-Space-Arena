@@ -77,8 +77,8 @@ class Scene(ABC):
         self.path = engine.find_path(start, goal, algo_key)
         
         if not self.path:
-            print("No path found! Using fallback.")
-            self.path = [start, goal]
+            print("No path found! Agent will fail.")
+            self.path = [start] # No movement, will strictly fail
         
         return start, goal
 
@@ -103,7 +103,8 @@ class Scene(ABC):
         execution_time = (time.time() - t0) * 1000 # ms
         
         if not path:
-             path = [start, goal]
+             # Logic for failure: Empty path or just start pos
+             path = [start]
              
         new_agent = Agent(
             start=start,
@@ -275,21 +276,23 @@ class Scene(ABC):
             self.agent_renderer.draw_agent(agent, agent.shape_type)
 
     def _check_victory(self):
-        """Check if agents reached goal"""
-        all_arrived = True
+        """Check if agents reached goal OR failed"""
+        all_finished = True
         for agent in self.agents:
             if agent.arrived:
                 if not hasattr(agent, '_victory_printed'):
                     print(f"🎉 Agent ({agent.algo_name}) reached goal! Steps: {agent.steps_taken}, Time: {agent.travel_time:.2f}s")
                     agent._victory_printed = True
+            elif agent.stuck:
+                if not hasattr(agent, '_failure_printed'):
+                    print(f"❌ Agent ({agent.algo_name}) FAILED. Steps: {agent.steps_taken}, Time: {agent.travel_time:.2f}s")
+                    agent._failure_printed = True
             else:
-                all_arrived = False
+                all_finished = False
         
-        if all_arrived and self.agents:
-            # Trigger global completion event? 
-            # For now just console log, will be handled by UI later
+        if all_finished and self.agents:
             if not hasattr(self, '_all_finished_printed'):
-                print("🏆 All agents have finished!")
+                print("🏁 Consensus: All agents have finished (Success or Fail).")
                 self._all_finished_printed = True
                 self.is_finished = True
 

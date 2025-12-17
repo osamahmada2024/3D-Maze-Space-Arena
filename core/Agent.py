@@ -1,5 +1,4 @@
 import math
-import time
 from collections import deque
 
 
@@ -65,11 +64,10 @@ class Agent:
             self._mark_arrival()
             return
 
-        tx, ty = self.next_target()
-        
-        # If no more targets but not reached goal -> Stuck
+        # If no more targets but not reached goal -> Status: FAILED
         if tx is None:
             self.stuck = True
+            self._mark_failure()
             return
 
         x, _, z = self.position
@@ -103,6 +101,7 @@ class Agent:
         new_dz = ty - nz
         new_dist = math.sqrt(new_dx*new_dx + new_dz*new_dz)
         
+        # Check overshoot/arrival at target
         if new_dist < 0.005:
             self.position = (float(tx), 0.3, float(ty))
             self.path_i += 1
@@ -116,9 +115,7 @@ class Agent:
 
     def next_target(self):
         if self.path_i >= len(self.path):
-            # If path exhausted but not at goal, return goal as target
-            # This fixes "Stopping 1 step short" if path didn't include goal
-            return self.goal
+            return None, None # End of path
         return self.path[self.path_i]
 
     def reached_goal(self):
@@ -126,13 +123,19 @@ class Agent:
         dx = self.position[0] - self.goal[0]
         dz = self.position[2] - self.goal[1]
         dist_to_goal = math.sqrt(dx*dx + dz*dz)
-        # Tight threshold to ensure move() completes the step increment before finishing
-        return dist_to_goal < 0.01
+        return dist_to_goal < 0.5
 
     def _mark_arrival(self):
-        if not self.arrived:
+        if not self.arrived and not self.stuck:
             self.arrived = True
-            # Snap to exact goal pos
-            self.position = (float(self.goal[0]), 0.3, float(self.goal[1]))
+            self.travel_finish_time = time.time()
+            self.travel_time = self.travel_finish_time - self.travel_start_time
+
+    def _mark_failure(self):
+        """Mark agent as failed (stuck/no path)"""
+        if not self.stuck: # Should be set by caller, but ensure logic
+            self.stuck = True
+        
+        if self.travel_finish_time is None:
             self.travel_finish_time = time.time()
             self.travel_time = self.travel_finish_time - self.travel_start_time

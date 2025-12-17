@@ -66,8 +66,14 @@ class ResultsDashboard:
             self.screen.blit(steps_txt, (420, y))
             
             # Time
-            time_str = f"{agent.travel_time:.2f}s"
-            time_txt = self.FONT_SMALL.render(time_str, True, self.TEAL)
+            if agent.stuck:
+                time_str = f"{agent.travel_time:.2f}s (FAILED)"
+                time_col = (255, 100, 100) # Red
+            else:
+                time_str = f"{agent.travel_time:.2f}s"
+                time_col = self.TEAL
+                
+            time_txt = self.FONT_SMALL.render(time_str, True, time_col)
             self.screen.blit(time_txt, (620, y+5))
             
             # Bar graph visual for time? Optional but nice.

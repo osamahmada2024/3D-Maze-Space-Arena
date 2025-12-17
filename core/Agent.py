@@ -59,10 +59,11 @@ class Agent:
                 self.history.append(self.position)
                 self._last_history_pos = self.position
 
-    def move(self, dt):
         if self.reached_goal():
             self._mark_arrival()
             return
+
+        tx, ty = self.next_target()
 
         # If no more targets but not reached goal -> Status: FAILED
         if tx is None:

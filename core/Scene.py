@@ -98,11 +98,9 @@ class Scene(ABC):
             
         # Recalculate path for this agent
         engine = PathfindingEngine(self.grid)
-        print(f"🔍 Computing path for {algo}...")
         t0 = time.time()
         path = engine.find_path(start, goal, algo)
         execution_time = (time.time() - t0) * 1000 # ms
-        print(f"✅ {algo} done in {execution_time:.1f}ms")
         
         if not path:
              # Logic for failure: Empty path or just start pos
@@ -297,8 +295,6 @@ class Scene(ABC):
                 print("🏁 Consensus: All agents have finished (Success or Fail).")
                 self._all_finished_printed = True
                 self.is_finished = True
-                # Stop theme music when simulation ends
-                pygame.mixer.music.stop()
 
     # ==========================================================================
     # Abstract methods (must be implemented by subclasses)

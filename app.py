@@ -54,7 +54,8 @@ def create_opengl_display(w, h, title):
             continue
             
     print("CRITICAL: Failed to create ANY OpenGL context.")
-    sys.exit(1)
+    print("Your system may not support OpenGL. Try running on a different machine.")
+    return None, None
 
 def main():
     while True: # Restart loop
@@ -88,6 +89,13 @@ def main():
 
         # 3. Initialize Game (Robust)
         screen, clock = create_opengl_display(WIDTH, HEIGHT, f"3D Maze - {selected_theme} Edition")
+        
+        # Check if OpenGL context creation failed
+        if screen is None or clock is None:
+            print("❌ Cannot proceed without OpenGL support.")
+            print("Please run this application on a system with OpenGL drivers.")
+            input("Press Enter to exit...")
+            break
 
         current_scene = None
         

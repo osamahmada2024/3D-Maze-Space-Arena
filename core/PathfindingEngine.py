@@ -208,18 +208,78 @@ class PathfindingEngine:
 
         return get_path_from_genome(best_overall_genome)
 
+    def ucs(self, start: Tuple[int,int], goal: Tuple[int,int]) -> Optional[List[Tuple[int,int]]]:
+        """Uniform Cost Search (Alias for Dijkstra in unweighted grid)"""
+        return self.dijkstra(start, goal)
+
+    def hill_climbing(self, start: Tuple[int,int], goal: Tuple[int,int]) -> Optional[List[Tuple[int,int]]]:
+        """Hill Climbing (Implemented as Greedy Best-First Search)"""
+        open_set = []
+        heapq.heappush(open_set, (self.heuristic(start, goal), start))
+        parent = {start: None}
+        visited = {start}
+
+        while open_set:
+            _, current = heapq.heappop(open_set)
+            
+            if current == goal:
+                return self.reconstruct(parent, start, goal)
+
+            # Greedy: Only consider neighbors, pick best heuristic next
+            # Standard Hill Climbing doesn't backtrack, but Best-First does.
+            # User likely implies Informed Search -> Greedy Best First.
+            for neighbor in self.utils.neighbors(*current):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    parent[neighbor] = current
+                    h = self.heuristic(neighbor, goal)
+                    heapq.heappush(open_set, (h, neighbor))
+        
+        return []
+
+    def ids(self, start: Tuple[int,int], goal: Tuple[int,int]) -> Optional[List[Tuple[int,int]]]:
+        """Iterative Deepening Search"""
+        def dls(node, depth, path, visited_cycle):
+            if depth == 0 and node == goal:
+                return path
+            if depth > 0:
+                if node == goal:
+                    return path
+                
+                for neighbor in self.utils.neighbors(*node):
+                    if neighbor not in visited_cycle:
+                        visited_cycle.add(neighbor)
+                        res = dls(neighbor, depth-1, path + [neighbor], visited_cycle)
+                        visited_cycle.remove(neighbor)
+                        if res:
+                            return res
+            return None
+
+        # Limit depth to avoid infinite loops if no path
+        max_depth = self.rows * self.cols  # Worst case
+        for d in range(max_depth):
+            # Visited set for cycle prevention in current path branch
+            res = dls(start, d, [start], {start})
+            if res:
+                return res
+        return []
+
     def find_path(self, start: Tuple[int,int], goal: Tuple[int,int], algo: str) -> Optional[List[Tuple[int,int]]]:
         """Select algorithm and compute path"""
         algo_lower = algo.lower()
         
         if algo_lower in ("a*", "astar", "a* search"):
             return self.astar(start, goal)
-        elif algo_lower == "dijkstra":
+        elif algo_lower in ("dijkstra", "ucs", "uniform-cost search"):
             return self.dijkstra(start, goal)
         elif algo_lower == "bfs":
             return self.bfs(start, goal)
         elif algo_lower == "dfs":
             return self.dfs(start, goal)
+        elif algo_lower in ("ids", "iterative deepening"):
+            return self.ids(start, goal)
+        elif algo_lower in ("hill climbing", "greedy", "greedy bfs"):
+            return self.hill_climbing(start, goal)
         elif algo_lower in ("genetic", "ga", "genetic algorithm"):
             print("🧬 Running Genetic Algorithm pathfinding...")
             return self.genetic_algorithm(start, goal)

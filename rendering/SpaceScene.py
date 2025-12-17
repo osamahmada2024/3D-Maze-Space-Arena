@@ -81,7 +81,8 @@ class SpaceScene(Scene):
         self._update_camera_input(dt)
         
         # Agent update
-        self.agent.update(dt)
+        for agent in self.agents:
+            agent.update(dt)
         self.agent_renderer.update_time(dt)
         
         # Camera follow (from base class)

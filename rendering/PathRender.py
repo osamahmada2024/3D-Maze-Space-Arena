@@ -88,3 +88,39 @@ class PathRender:
         
         glDisable(GL_BLEND)
         glLineWidth(1.0)
+
+    def draw_coverage(self, agents):
+        """
+        Draws highlighted squares for every cell visited by the agents.
+        """
+        glDisable(GL_LIGHTING)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        
+        # Lift slightly above floor to avoid z-fighting
+        y_height = 0.05
+        
+        half_grid = self.grid_size // 2
+        
+        glBegin(GL_QUADS)
+        
+        for agent in agents:
+            r, g, b = agent.color
+            # Use low alpha for coverage to not be overwhelming
+            glColor4f(r, g, b, 0.3)
+            
+            for (gx, gy) in agent.visited_cells:
+                # Convert grid to world
+                x = (gx - half_grid) * self.cell_size
+                z = (gy - half_grid) * self.cell_size
+                
+                half_cell = self.cell_size * 0.45 # Slightly smaller than full cell
+                
+                glVertex3f(x - half_cell, y_height, z - half_cell)
+                glVertex3f(x + half_cell, y_height, z - half_cell)
+                glVertex3f(x + half_cell, y_height, z + half_cell)
+                glVertex3f(x - half_cell, y_height, z + half_cell)
+                
+        glEnd()
+        glDisable(GL_BLEND)
+        glEnable(GL_LIGHTING)

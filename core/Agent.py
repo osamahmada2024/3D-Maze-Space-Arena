@@ -3,15 +3,22 @@ from collections import deque
 
 
 class Agent:
-    def __init__(self, start, goal, path, speed=2.0, color=(0, 1, 1), shape_type="sphere_droid", trail_length=20):
+    def __init__(self, start, goal, path, speed=2.0, color=(0, 1, 1), shape_type="sphere_droid", 
+                 trail_length=20, algo_name="Unknown", execution_time=0.0):
         self.start = start              
         self.goal = goal                
         self.path = path                
         self.speed = speed             
         self.color = color
         self.shape_type = shape_type
+        self.algo_name = algo_name
+        self.execution_time = execution_time
+        
         self.path_i = 0                 
         self.position = (float(start[0]), 0.3, float(start[1]))
+        self.steps_taken = 0
+        self.visited_cells = set()
+        self.visited_cells.add(start)
         
         # ✨ deque للأداء الأفضل
         self.trail_length = trail_length
@@ -58,6 +65,9 @@ class Agent:
         if dist < 0.01:
             self.position = (float(tx), 0.3, float(ty))
             self.path_i += 1
+            self.steps_taken += 1
+            if self.path_i < len(self.path):
+                self.visited_cells.add(self.path[self.path_i])
 
             if self.reached_goal():
                 self.arrived = True
@@ -80,6 +90,9 @@ class Agent:
         if new_dist < 0.005:
             self.position = (float(tx), 0.3, float(ty))
             self.path_i += 1
+            self.steps_taken += 1
+            if self.path_i < len(self.path):
+                self.visited_cells.add(self.path[self.path_i])
             if self.reached_goal():
                 self.arrived = True
         else:

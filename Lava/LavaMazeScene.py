@@ -138,17 +138,21 @@ class LavaMazeScene(Scene):
         
         self._update_camera_input(dt)
         
-        self.agent.update(dt)
+        for agent in self.agents:
+            agent.update(dt)
         self.agent_renderer.update_time(dt)
         
         self._update_camera_follow()
         
-        wx = (self.agent.position[0] - self.grid_size // 2) * self.cell_size
-        wy = self.agent.position[1]
-        wz = (self.agent.position[2] - self.grid_size // 2) * self.cell_size
-        
-        self._check_lava_damage(wx, wy, wz, dt)
-        self._check_footsteps(wx, wz)
+        # Use first agent for environmental interactions for now
+        target_agent = self.agents[0] if self.agents else None
+        if target_agent:
+            wx = (target_agent.position[0] - self.grid_size // 2) * self.cell_size
+            wy = target_agent.position[1]
+            wz = (target_agent.position[2] - self.grid_size // 2) * self.cell_size
+            
+            self._check_lava_damage(wx, wy, wz, dt)
+            self._check_footsteps(wx, wz)
         
         self.lava_manager.update(dt)
         self.fire_particles.update(dt)

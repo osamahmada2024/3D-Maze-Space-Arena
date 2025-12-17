@@ -35,9 +35,10 @@ class Scene(ABC):
         self.cell_size = GRID_SETTINGS["cell_size"]
         
         # Game Objects
-        self.agent = None
+        self.agents = [] # List of Agent objects
+        self.agent = None # Deprecated, kept for backward compat (references agents[0] if exists)
         self.grid = None
-        self.path = None
+        self.path = None # Deprecated/Single path
         self.camera = None
         
         # Renderers
@@ -48,6 +49,7 @@ class Scene(ABC):
         # State
         self.start_time = 0
         self.game_active = False
+        self.is_finished = False
 
     def _create_grid(self, obstacle_prob: float):
         """Create maze grid with pathfinding"""
@@ -72,24 +74,53 @@ class Scene(ABC):
         
         return start, goal
 
-    def _create_agent(self, start, goal):
-        """Create agent with centralized settings"""
-        agent_color = AGENT_SETTINGS["colors"].get(
-            self.agent_shape, 
-            (0.0, 1.0, 1.0)
-        )
+    def add_agent(self, start, goal, agent_config=None):
+        """Add an agent to the scene. 
+           agent_config: dict with keys 'algo_name', 'shape', 'color'
+        """
+        # Default/Legacy fallback
+        shape = self.agent_shape
+        algo = self.algo_name
+        color = AGENT_SETTINGS["colors"].get(shape, (0.0, 1.0, 1.0))
         
-        self.agent = Agent(
+        if agent_config:
+            shape = agent_config.get("shape", shape)
+            algo = agent_config.get("algo_name", algo)
+            color = AGENT_SETTINGS["colors"].get(shape, color)
+            
+        # Recalculate path for this agent
+        engine = PathfindingEngine(self.grid)
+        t0 = time.time()
+        path = engine.find_path(start, goal, algo)
+        execution_time = (time.time() - t0) * 1000 # ms
+        
+        if not path:
+             path = [start, goal]
+             
+        new_agent = Agent(
             start=start,
             goal=goal,
-            path=self.path,
+            path=path,
             speed=AGENT_SETTINGS["speed"],
-            color=agent_color,
-            shape_type=self.agent_shape,
-            trail_length=AGENT_SETTINGS["trail_length"]  # ✅ من الإعدادات المركزية
+            color=color,
+            shape_type=shape,
+            trail_length=AGENT_SETTINGS["trail_length"],
+            algo_name=algo,
+            execution_time=execution_time
         )
         
-        return self.agent
+        self.agents.append(new_agent)
+        
+        # Maintain legacy single-agent reference if this is the first one
+        if len(self.agents) == 1:
+            self.agent = new_agent
+            self.path = path # Legacy path ref
+            
+        return new_agent
+
+    def _create_agent(self, start, goal):
+        """Legacy wrapper for add_agent"""
+        return self.add_agent(start, goal)
 
     def _create_camera(self):
         """Create camera with centralized settings"""
@@ -139,9 +170,13 @@ class Scene(ABC):
 
     def _update_camera_follow(self):
         """Smooth camera follow (shared between all scenes)"""
-        wx = (self.agent.position[0] - self.grid_size // 2) * self.cell_size
-        wy = self.agent.position[1]
-        wz = (self.agent.position[2] - self.grid_size // 2) * self.cell_size
+        # Follow the first agent by default
+        target_agent = self.agents[0] if self.agents else self.agent
+        if not target_agent: return
+        
+        wx = (target_agent.position[0] - self.grid_size // 2) * self.cell_size
+        wy = target_agent.position[1]
+        wz = (target_agent.position[2] - self.grid_size // 2) * self.cell_size
         
         # Smooth follow
         smooth = CAMERA_SETTINGS["smooth_factor"]
@@ -168,28 +203,48 @@ class Scene(ABC):
         )
 
     def _render_agent_and_goal(self):
-        """Render agent and goal (shared)"""
-        # Path
+        """Render agents, goals and paths (shared)"""
+        # Coverage
+        self.path_renderer.draw_coverage(self.agents)
+        
+        # Path & History
         glDisable(GL_LIGHTING)
-        self.path_renderer.draw_path(self.agent)
-        self.path_renderer.draw_history(self.agent)
+        for agent in self.agents:
+            self.path_renderer.draw_path(agent)
+            self.path_renderer.draw_history(agent)
         glEnable(GL_LIGHTING)
         
-        # Goal
-        if not self.agent.arrived:
-            glDisable(GL_LIGHTING)
-            self.goal_renderer.draw_goal(self.agent)
-            glEnable(GL_LIGHTING)
+        # Goal (Draw for all agents, though likely shared)
+        # Using set to avoid drawing same goal multiple times if identical? 
+        # For now, simplistic loop (goals might be different in future)
+        for agent in self.agents:
+            if not agent.arrived:
+                glDisable(GL_LIGHTING)
+                self.goal_renderer.draw_goal(agent)
+                glEnable(GL_LIGHTING)
         
-        # Agent
-        self.agent_renderer.draw_agent(self.agent, self.agent.shape_type)
+        # Agents
+        for agent in self.agents:
+            self.agent_renderer.draw_agent(agent, agent.shape_type)
 
     def _check_victory(self):
-        """Check if agent reached goal"""
-        if self.agent.arrived:
-            if not hasattr(self.agent, '_victory_printed'):
-                print("🎉 Goal reached! Congratulations!")
-                self.agent._victory_printed = True
+        """Check if agents reached goal"""
+        all_arrived = True
+        for agent in self.agents:
+            if agent.arrived:
+                if not hasattr(agent, '_victory_printed'):
+                    print(f"🎉 Agent ({agent.algo_name}) reached goal! Steps: {agent.steps_taken}, Time: {agent.execution_time:.2f}ms")
+                    agent._victory_printed = True
+            else:
+                all_arrived = False
+        
+        if all_arrived and self.agents:
+            # Trigger global completion event? 
+            # For now just console log, will be handled by UI later
+            if not hasattr(self, '_all_finished_printed'):
+                print("🏆 All agents have finished!")
+                self._all_finished_printed = True
+                self.is_finished = True
 
     # ==========================================================================
     # Abstract methods (must be implemented by subclasses)

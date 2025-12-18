@@ -153,6 +153,7 @@ class SimConfigPanel:
         self.FONT_SMALL = pygame.font.SysFont("Segoe UI", 10)
         
         self.running = True
+        self.return_to_menu = False
         
         # Data
         self.config = {
@@ -162,7 +163,7 @@ class SimConfigPanel:
         }
         
         # Shortened algorithm names for UI
-        self.algorithms = ["A*", "BFS", "DFS", "Dijkstra", "UCS", "IDS", "Greedy", "Genetic"]
+        self.algorithms = ["A*", "BFS", "DFS", "UCS", "IDS", "Greedy", "Genetic"]
         self.shapes = ["Sphere", "Cube", "Drone", "Alien"]
         self.dist_options = ["Near", "Mid", "Far"]
         
@@ -259,10 +260,26 @@ class SimConfigPanel:
             )
             self.elements.append(btn_shape)
 
-        # --- 3. Start Button (Shorter Text) ---
-        start_w = 200
+        # --- 3. Action Buttons (Back + Start) ---
+        btn_w = 150
+        btn_h = 50
+        btn_gap = 20
+        total_w = 2 * btn_w + btn_gap
+        start_x = (W - total_w) // 2
+        btn_y = H - 80
+        
+        # Back Button
+        self.btn_back = Button(
+            start_x, btn_y, btn_w, btn_h,
+            "BACK", self.FONT_HEADER,
+            self._go_back,
+            bg_color=COLORS["border"]
+        )
+        self.elements.append(self.btn_back)
+        
+        # Start Button
         self.btn_start = Button(
-            (W - start_w)//2, H - 80, start_w, 50,
+            start_x + btn_w + btn_gap, btn_y, btn_w, btn_h,
             "START", self.FONT_TITLE,
             self._start_sim,
             bg_color=COLORS["accent"]
@@ -287,6 +304,10 @@ class SimConfigPanel:
         self._refresh(keep_values=True)
     def _start_sim(self):
         self.running = False
+        self.return_to_menu = False
+    def _go_back(self):
+        self.running = False
+        self.return_to_menu = True
         
     def _refresh(self, keep_values=True):
         if keep_values:
@@ -426,7 +447,6 @@ class SimConfigPanel:
             "A*": "A* search",
             "BFS": "BFS",
             "DFS": "DFS",
-            "Dijkstra": "Dijkstra",
             "UCS": "UCS",
             "IDS": "IDS",
             "Greedy": "Hill Climbing",

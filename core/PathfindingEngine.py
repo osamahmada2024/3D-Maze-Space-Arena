@@ -238,31 +238,29 @@ class PathfindingEngine:
         return []
 
     def ids(self, start: Tuple[int,int], goal: Tuple[int,int]) -> Optional[List[Tuple[int,int]]]:
-        """Iterative Deepening Search"""
-        def dls(node, depth, path, visited_cycle):
-            if depth == 0 and node == goal:
-                return path
-            if depth > 0:
-                if node == goal:
+        """Iterative Deepening Search (Optimized)"""
+        # Use Manhattan distance as heuristic for max depth
+        manhattan = abs(start[0] - goal[0]) + abs(start[1] - goal[1])
+        max_depth = min(manhattan * 3, 100)  # Cap at 100 to prevent freezing
+        
+        for depth_limit in range(max_depth):
+            # Depth-limited DFS using stack (iterative)
+            stack = [(start, [start], 0)]  # (node, path, depth)
+            visited = {start}
+            
+            while stack:
+                current, path, depth = stack.pop()
+                
+                if current == goal:
                     return path
                 
-                for neighbor in self.utils.neighbors(*node):
-                    if neighbor not in visited_cycle:
-                        visited_cycle.add(neighbor)
-                        res = dls(neighbor, depth-1, path + [neighbor], visited_cycle)
-                        visited_cycle.remove(neighbor)
-                        if res:
-                            return res
-            return None
-
-        # Limit depth to avoid infinite loops if no path
-        max_depth = self.rows * self.cols  # Worst case
-        for d in range(max_depth):
-            # Visited set for cycle prevention in current path branch
-            res = dls(start, d, [start], {start})
-            if res:
-                return res
-        return []
+                if depth < depth_limit:
+                    for neighbor in self.utils.neighbors(*current):
+                        if neighbor not in visited:
+                            visited.add(neighbor)
+                            stack.append((neighbor, path + [neighbor], depth + 1))
+        
+        return []  # No path found
 
     def find_path(self, start: Tuple[int,int], goal: Tuple[int,int], algo: str) -> Optional[List[Tuple[int,int]]]:
         """Select algorithm and compute path"""

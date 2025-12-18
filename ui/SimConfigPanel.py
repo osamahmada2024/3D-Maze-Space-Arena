@@ -163,7 +163,7 @@ class SimConfigPanel:
         }
         
         # Shortened algorithm names for UI
-        self.algorithms = ["A*", "BFS", "DFS", "UCS", "IDS", "Greedy", "Genetic"]
+        self.algorithms = ["A*", "BFS", "DFS", "Dijkstra", "UCS", "IDS", "Greedy", "Genetic"]
         self.shapes = ["Sphere", "Cube", "Drone", "Alien"]
         self.dist_options = ["Near", "Mid", "Far"]
         
@@ -449,6 +449,7 @@ class SimConfigPanel:
             "A*": "A* search",
             "BFS": "BFS",
             "DFS": "DFS",
+            "Dijkstra": "Dijkstra",
             "UCS": "UCS",
             "IDS": "IDS",
             "Greedy": "Hill Climbing",

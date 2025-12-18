@@ -9,9 +9,9 @@ class ResultsDashboard:
         self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT))
         pygame.display.set_caption("Simulation Results & Analytics")
         self.clock = pygame.time.Clock()
-        self.FONT = pygame.font.Font(None, 42)
-        self.FONT_SMALL = pygame.font.Font(None, 28)
-        self.FONT_BTN = pygame.font.Font(None, 32)
+        self.FONT = pygame.font.Font(None, 36)
+        self.FONT_SMALL = pygame.font.Font(None, 24)
+        self.FONT_BTN = pygame.font.Font(None, 28)
         
         self.WHITE = (255, 255, 255)
         self.BG_COLOR = (20, 25, 30)
@@ -20,15 +20,18 @@ class ResultsDashboard:
         self.BTN_EXIT = (200, 50, 50)
         self.BTN_RESET = (50, 150, 255)
         
-        # Sort agents by steps (Step Efficiency)
-        self.agents = sorted(agents, key=lambda a: a.steps_taken)
-        self.running = True
-        self.action = None  # Track user action: "EXIT" or "RESTART"
+        # Sort agents: successful first (by steps), then failed last
+        successful = [a for a in agents if not a.stuck]
+        failed = [a for a in agents if a.stuck]
+        self.agents = sorted(successful, key=lambda a: a.steps_taken) + failed
         
-        # Button rects
-        btn_w, btn_h = 180, 50
-        btn_y = self.HEIGHT - 80
-        spacing = 30
+        self.running = True
+        self.action = None
+        
+        # Button rects (Responsive positioning)
+        btn_w, btn_h = 150, 45
+        btn_y = self.HEIGHT - 60  # Higher position
+        spacing = 20
         center_x = self.WIDTH // 2
         
         self.btn_exit_rect = pygame.Rect(center_x - btn_w - spacing//2, btn_y, btn_w, btn_h)
@@ -39,52 +42,60 @@ class ResultsDashboard:
         
         # Header
         title = self.FONT.render("Simulation Results", True, self.TEAL)
-        self.screen.blit(title, (self.WIDTH//2 - title.get_width()//2, 30))
+        self.screen.blit(title, (self.WIDTH//2 - title.get_width()//2, 20))
         
         # Table Header
-        headers_y = 100
-        pygame.draw.line(self.screen, self.TEAL, (50, headers_y + 30), (self.WIDTH-50, headers_y + 30), 2)
+        headers_y = 70
+        pygame.draw.line(self.screen, self.TEAL, (40, headers_y + 25), (self.WIDTH-40, headers_y + 25), 2)
         
         h_rank = self.FONT_SMALL.render("Rank", True, self.WHITE)
         h_algo = self.FONT_SMALL.render("Algorithm", True, self.WHITE)
-        h_steps = self.FONT_SMALL.render("Steps (Travel)", True, self.WHITE)
+        h_steps = self.FONT_SMALL.render("Steps", True, self.WHITE)
         h_time = self.FONT_SMALL.render("Time (s)", True, self.WHITE)
         
-        self.screen.blit(h_rank, (60, headers_y))
-        self.screen.blit(h_algo, (150, headers_y))
+        self.screen.blit(h_rank, (50, headers_y))
+        self.screen.blit(h_algo, (130, headers_y))
         self.screen.blit(h_steps, (400, headers_y))
-        self.screen.blit(h_time, (600, headers_y))
+        self.screen.blit(h_time, (580, headers_y))
         
-        # Rows
-        start_y = 150
-        for i, agent in enumerate(self.agents):
-            y = start_y + i * 60
+        # Rows (Reduced height to fit more)
+        start_y = 110
+        row_h = 50
+        max_visible = min(len(self.agents), 8)  # Show max 8 agents
+        
+        for i in range(max_visible):
+            agent = self.agents[i]
+            y = start_y + i * row_h
             
             # Rank
-            rank_txt = self.FONT.render(f"#{i+1}", True, self.YELLOW if i==0 else self.WHITE)
-            self.screen.blit(rank_txt, (60, y))
+            if agent.stuck:
+                rank_txt = self.FONT.render("--", True, (150, 150, 150))
+            else:
+                rank_num = sum(1 for a in self.agents[:i] if not a.stuck) + 1
+                rank_txt = self.FONT.render(f"#{rank_num}", True, self.YELLOW if rank_num==1 else self.WHITE)
+            self.screen.blit(rank_txt, (50, y))
             
             # Icon/Color
-            pygame.draw.circle(self.screen, agent.color, (130, y+15), 10)
+            pygame.draw.circle(self.screen, agent.color, (110, y+12), 8)
             
             # Algo Name
             algo_txt = self.FONT_SMALL.render(agent.algo_name, True, self.WHITE)
-            self.screen.blit(algo_txt, (150, y+5))
+            self.screen.blit(algo_txt, (130, y+5))
             
             # Steps
-            steps_txt = self.FONT.render(str(agent.steps_taken), True, self.YELLOW if i==0 else self.WHITE)
-            self.screen.blit(steps_txt, (420, y))
+            steps_txt = self.FONT.render(str(agent.steps_taken), True, self.YELLOW if i==0 and not agent.stuck else self.WHITE)
+            self.screen.blit(steps_txt, (410, y))
             
             # Time
             if agent.stuck:
                 time_str = f"{agent.travel_time:.2f}s (FAILED)"
-                time_col = (255, 100, 100) # Red
+                time_col = (255, 100, 100)
             else:
                 time_str = f"{agent.travel_time:.2f}s"
                 time_col = self.TEAL
                 
             time_txt = self.FONT_SMALL.render(time_str, True, time_col)
-            self.screen.blit(time_txt, (620, y+5))
+            self.screen.blit(time_txt, (590, y+5))
         
         # --- Bottom Buttons ---
         mouse_pos = pygame.mouse.get_pos()

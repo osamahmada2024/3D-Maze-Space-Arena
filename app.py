@@ -74,14 +74,13 @@ def main():
         config_panel = SimConfigPanel()
         config_data = config_panel.run()
         
-        # Check if user pressed Back button
-        if config_panel.return_to_menu:
-            print("Returning to theme selection...")
-            pygame.display.quit()
-            continue  # Go back to theme selection
-        
         # 🔥 Cleanup after 2D panels
         pygame.display.quit()
+        
+        # Handle back navigation
+        if config_data is None:
+            # User clicked "Back" - return to theme selection
+            continue
         
         if not config_data:
             print("Configuration cancelled. Exiting...")

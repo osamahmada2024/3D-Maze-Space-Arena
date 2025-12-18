@@ -153,7 +153,7 @@ class SimConfigPanel:
         self.FONT_SMALL = pygame.font.SysFont("Segoe UI", 10)
         
         self.running = True
-        self.return_to_menu = False
+        self.action = "start"  # Track user action: "start" or "back"
         
         # Data
         self.config = {
@@ -260,26 +260,24 @@ class SimConfigPanel:
             )
             self.elements.append(btn_shape)
 
-        # --- 3. Action Buttons (Back + Start) ---
+        # --- 3. Bottom Buttons (Back & Start) ---
         btn_w = 150
         btn_h = 50
-        btn_gap = 20
-        total_w = 2 * btn_w + btn_gap
-        start_x = (W - total_w) // 2
         btn_y = H - 80
+        spacing = 20
         
-        # Back Button
+        # Back Button (Left)
         self.btn_back = Button(
-            start_x, btn_y, btn_w, btn_h,
-            "BACK", self.FONT_HEADER,
+            MARGIN_X, btn_y, btn_w, btn_h,
+            "BACK", self.FONT_TITLE,
             self._go_back,
             bg_color=COLORS["border"]
         )
         self.elements.append(self.btn_back)
         
-        # Start Button
+        # Start Button (Right)
         self.btn_start = Button(
-            start_x + btn_w + btn_gap, btn_y, btn_w, btn_h,
+            W - MARGIN_X - btn_w, btn_y, btn_w, btn_h,
             "START", self.FONT_TITLE,
             self._start_sim,
             bg_color=COLORS["accent"]
@@ -304,10 +302,10 @@ class SimConfigPanel:
         self._refresh(keep_values=True)
     def _start_sim(self):
         self.running = False
-        self.return_to_menu = False
+        self.action = "start"
     def _go_back(self):
         self.running = False
-        self.return_to_menu = True
+        self.action = "back"
         
     def _refresh(self, keep_values=True):
         if keep_values:
@@ -439,6 +437,10 @@ class SimConfigPanel:
             if not self.running: break
             self.draw()
             self.clock.tick(60)
+        
+        # Return None if user went back
+        if self.action == "back":
+            return None
         return self.finalize_config()
 
     def finalize_config(self):

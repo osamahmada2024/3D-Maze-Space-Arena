@@ -208,7 +208,9 @@ class LavaMazeScene(Scene):
         
         # ✅ إعادة ضبط الإضاءة قبل رسم الـ Agent
         self._reset_lighting_for_agent()
+        glDisable(GL_FOG)
         self._render_agent_and_goal()
+        glEnable(GL_FOG)
         self._restore_lava_lighting()
         
         self._render_health_bar()

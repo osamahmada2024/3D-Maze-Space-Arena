@@ -64,33 +64,56 @@ class GridGenerator:
     
     def _generate_simple_path(self) -> List[Tuple[int, int]]:
         """
-        Generate a SIMPLE guaranteed path from (0,0) to (grid_size-1, grid_size-1).
-        This path only moves RIGHT or DOWN, ensuring it ALWAYS reaches the goal.
-        
-        Returns:
-            List[Tuple[int, int]]: List of (x, y) coordinates forming the path
+        Generate a GUARANTEED but WINDING path from (0,0) to goal.
+        Unlike the previous simple path, this one will zigzag to prevent
+        algorithms from taking the exact same trivial route.
         """
         x, y = 0, 0
         target_x, target_y = self.grid_size - 1, self.grid_size - 1
         path = [(x, y)]
         
-        # Move right and down only (guaranteed to reach target)
-        while x < target_x or y < target_y:
-            if x < target_x and y < target_y:
-                # Both directions available - choose randomly
-                if random.random() < 0.5:
-                    x += 1
-                else:
-                    y += 1
-            elif x < target_x:
-                # Can only move right
-                x += 1
-            else:
-                # Can only move down
-                y += 1
+        while x != target_x or y != target_y:
+            # 30% chance to move in a non-optimal direction (if safe)
+            # to create zigzags, but mostly move towards goal.
             
-            path.append((x, y))
-        
+            dx = 1 if x < target_x else (-1 if x > target_x else 0)
+            dy = 1 if y < target_y else (-1 if y > target_y else 0)
+            
+            candidates = []
+            
+            # Prefer Optimal Moves
+            if dx != 0: candidates.append((x + dx, y))
+            if dy != 0: candidates.append((x, y + dy))
+            
+            # Add some "Noise" moves (sideways)
+            if random.random() < 0.3:
+                # Try moving perpendicular to optimal
+                if dx != 0: # Moving horizontally, try vertical noise
+                    if y + 1 < self.grid_size: candidates.append((x, y+1))
+                    if y - 1 >= 0: candidates.append((x, y-1))
+                elif dy != 0: # Moving vertically, try horizontal noise
+                    if x + 1 < self.grid_size: candidates.append((x+1, y))
+                    if x - 1 >= 0: candidates.append((x-1, y))
+            
+            # Filter valid and not immediately reversing (simple cycle check)
+            valid_moves = []
+            for cx, cy in candidates:
+                if 0 <= cx < self.grid_size and 0 <= cy < self.grid_size:
+                    if (cx, cy) not in path:
+                         valid_moves.append((cx, cy))
+            
+            if not valid_moves:
+                # Stuck? Force optimal move (shouldn't happen often in empty grid logic)
+                # Fallback: classic simple logic
+                if x < target_x: x += 1
+                elif y < target_y: y += 1
+                path.append((x, y))
+            else:
+                # Pick one
+                next_pos = random.choice(valid_moves)
+                path.append(next_pos)
+                x, y = next_pos
+                
         return path
     
     def _generate_random_walk_path(self) -> List[Tuple[int, int]]:

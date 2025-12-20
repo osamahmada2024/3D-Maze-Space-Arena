@@ -36,6 +36,9 @@ class Agent:
         # ✨ تخزين آخر موقع لتجنب إضافة نقاط مكررة
         self._last_history_pos = None
         self._history_min_dist = 0.05
+        
+        # ✨ For Collision Handling
+        self.prev_position = self.position
 
     def update(self, dt):
         # Start timer on first update
@@ -44,6 +47,9 @@ class Agent:
             
         if self.arrived or self.stuck:
             return
+            
+        # Store previous position before moving
+        self.prev_position = self.position
 
         self.move(dt)
 

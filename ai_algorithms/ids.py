@@ -1,4 +1,5 @@
 import time
+from typing import List, Optional, Tuple
 
 def run(start: Tuple[int,int], goal: Tuple[int,int], grid_utils) -> Optional[List[Tuple[int,int]]]:
     """Iterative Deepening Search (Optimized with Time Limit)"""

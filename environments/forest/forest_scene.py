@@ -140,6 +140,11 @@ class ForestScene(Scene):
         wy = self.agent.position[1]
         wz = (self.agent.position[2] - self.grid_size // 2) * self.cell_size
         
+        # 1. Check Tree Collisions (FIX)
+        if self.env_manager.check_collision((wx, wy, wz)):
+             # Push agent back if it hits a tree
+             self.agent.position = self.agent.prev_position
+
         # Movables
         self.movables.check_collisions(wx, wz)
         self.movables.update(dt, self.grid)
@@ -190,27 +195,23 @@ class ForestScene(Scene):
         # Fireflies
         self.fireflies.render()
 
-    def _update_forest_systems(self, dt):
-        """Update forest-specific systems"""
-        wx = (self.agent.position[0] - self.grid_size // 2) * self.cell_size
-        wy = self.agent.position[1]
-        wz = (self.agent.position[2] - self.grid_size // 2) * self.cell_size
+    def _render_floor(self):
+        """Render forest floor"""
+        glDisable(GL_LIGHTING)
+        half_world = self.grid_size * self.cell_size / 2.0
         
-        # 1. Check Tree Collisions (FIX)
-        if self.env_manager.check_collision((wx, wy, wz)):
-             # Simple elastic collision response (bounce back)
-             # In a grid system, we just stop or slow down, but here continuous...
-             # Actually, we should check *before* moving, but Agent.update handles movement.
-             # Scene.update runs after movement.
-             # So we push the agent back if it hits a tree.
-             
-             # Revert to last safe position approx?
-             # Or just set 'stuck' flag?
-             # For now, simplistic push back:
-             self.agent.position = self.agent.prev_position
-             # Or better, mark as collision for feedback
-             pass
+        glColor3f(0.05, 0.35, 0.05)
+        glBegin(GL_QUADS)
+        glNormal3f(0, 1, 0)
+        glVertex3f(-half_world, -0.1, -half_world)
+        glVertex3f(half_world, -0.1, -half_world)
+        glVertex3f(half_world, -0.1, half_world)
+        glVertex3f(-half_world, -0.1, half_world)
+        glEnd()
+        
+        glEnable(GL_LIGHTING)
 
-        # Movables
-        self.movables.check_collisions(wx, wz)
-        self.movables.update(dt, self.grid)
+    def cleanup(self):
+        if self.audio_system:
+            self.audio_system.cleanup()
+        print("[FOREST] Cleanup complete.")

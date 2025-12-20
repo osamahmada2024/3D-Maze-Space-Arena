@@ -51,7 +51,10 @@ ALGORITHM_MAP = {
     "A* search": "astar",
     "Dijkstra": "dijkstra",
     "DFS": "dfs",
-    "BFS": "bfs"
+    "BFS": "bfs",
+    "IDS": "ids",
+    "Hill Climbing": "greedy",
+    "Genetic": "genetic"
 }
 
 # =============================================================================

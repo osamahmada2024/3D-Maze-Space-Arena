@@ -3,8 +3,8 @@ import sys
 import time
 import pygame
 from OpenGL.GL import *
-from ui.MenuManager import MenuManager
-from forest.forest_scene import ForestScene
+from ui.menu_manager import MenuManager
+from environments.forest.forest_scene import ForestScene
 
 # Screen configuration
 WIDTH, HEIGHT = 1024, 720
@@ -70,7 +70,7 @@ def main():
         print(f"Selected Theme: {selected_theme}")
         
         # 2. Advanced Configuration
-        from ui.SimConfigPanel import SimConfigPanel
+        from ui.sim_config_panel import SimConfigPanel
         config_panel = SimConfigPanel()
         config_data = config_panel.run()
         
@@ -99,10 +99,10 @@ def main():
         if selected_theme == "FOREST":
             current_scene = ForestScene(WIDTH, HEIGHT)
         elif selected_theme == "LAVA":
-            from Lava.LavaMazeScene import LavaMazeScene
+            from environments.lava.lava_maze_scene import LavaMazeScene
             current_scene = LavaMazeScene(WIDTH, HEIGHT)
         else:  # DEFAULT (Space)
-            from rendering.SpaceScene import SpaceScene
+            from rendering.space_scene import SpaceScene
             current_scene = SpaceScene("sphere_droid", "astar", WIDTH, HEIGHT)
 
         # Initialize Scene with Config
@@ -192,7 +192,7 @@ def main():
         
         if simulation_complete:
             # 5. Results Dashboard
-            from ui.ResultsDashboard import ResultsDashboard
+            from ui.results_dashboard import ResultsDashboard
             # Need to pass agents from the scene
             dashboard = ResultsDashboard(current_scene.agents)
             res = dashboard.run()

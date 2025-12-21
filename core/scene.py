@@ -71,10 +71,11 @@ class Scene(ABC):
         self.grid[start[1]][start[0]] = 0
         self.grid[goal[1]][goal[0]] = 0
         
-        # Pathfinding
+        # Pathfinding (now returns tuple)
         engine = PathfindingEngine(self.grid)
         algo_key = ALGORITHM_MAP.get(self.algo_name, self.algo_name.lower())
-        self.path = engine.find_path(start, goal, algo_key)
+        path_result, _ = engine.find_path(start, goal, algo_key)
+        self.path = path_result
         
         if not self.path:
             print("No path found! Agent will fail.")

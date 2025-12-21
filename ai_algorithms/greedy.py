@@ -2,7 +2,7 @@ import heapq
 from typing import List, Tuple, Optional
 
 def run(start: Tuple[int,int], goal: Tuple[int,int], grid_utils) -> Tuple[Optional[List[Tuple[int,int]]], int]:
-    """Hill Climbing (Greedy Best-First Search). Returns (path, nodes_explored)."""
+    """Greedy Best-First Search Returns (path, nodes_explored)."""
     def heuristic(node, goal):
         return abs(node[0] - goal[0]) + abs(node[1] - goal[1])
 

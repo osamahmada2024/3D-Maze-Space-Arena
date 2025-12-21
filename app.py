@@ -56,6 +56,46 @@ def create_opengl_display(w, h, title):
     print("CRITICAL: Failed to create ANY OpenGL context.")
     sys.exit(1)
 
+def find_clear_goal_position(grid, preferred_pos, search_radius=3):
+    """
+    Find a clear position near the preferred goal position.
+    Searches in expanding squares around the preferred position.
+    
+    Args:
+        grid: 2D grid where 0 = free, 1 = obstacle
+        preferred_pos: (x, y) tuple of desired goal position
+        search_radius: Maximum radius to search
+        
+    Returns:
+        (x, y) tuple of a clear position, or preferred_pos if already clear
+    """
+    rows = len(grid)
+    cols = len(grid[0]) if rows > 0 else 0
+    px, py = preferred_pos
+    
+    # Validate preferred position is within bounds
+    if not (0 <= px < cols and 0 <= py < rows):
+        print(f"Warning: Preferred goal position {preferred_pos} is out of bounds, using (0,0)")
+        return (0, 0)
+    
+    # Check if preferred position is already clear
+    if grid[py][px] == 0:
+        return preferred_pos
+    
+    # Search in expanding squares around preferred position
+    for radius in range(1, search_radius + 1):
+        for dx in range(-radius, radius + 1):
+            for dy in range(-radius, radius + 1):
+                # Only check perimeter of current radius
+                if abs(dx) == radius or abs(dy) == radius:
+                    nx, ny = px + dx, py + dy
+                    if (0 <= nx < cols and 0 <= ny < rows and grid[ny][nx] == 0):
+                        return (nx, ny)
+    
+    # If no clear position found, return preferred (algorithms should handle unreachable goals)
+    print(f"Warning: No clear goal position found near {preferred_pos}, using as-is")
+    return preferred_pos
+
 def main():
     while True: # Restart loop
         # 1. Main Menu (Theme Selection)
@@ -131,21 +171,26 @@ def main():
         # Re-create all agents from config
         start_pos = (0, 0)
         
+        # Ensure start position is clear (should be protected by grid generator, but double-check)
+        if current_scene.grid[start_pos[1]][start_pos[0]] != 0:
+            print(f"Warning: Start position {start_pos} is blocked, clearing it")
+            current_scene.grid[start_pos[1]][start_pos[0]] = 0
+        
         # Determine Goal Logic
         dist_setting = config_data.get("target_dist", "Far")
         grid_sz = current_scene.grid_size
         
         if dist_setting == "Near":
              # 25% across
-             goal_pos = (grid_sz // 4, grid_sz // 4)
+             preferred_goal = (grid_sz // 4, grid_sz // 4)
         elif dist_setting == "Medium":
              # 50% across (approx)
-             goal_pos = (grid_sz // 2, grid_sz // 2)
+             preferred_goal = (grid_sz // 2, grid_sz // 2)
         else: # Far
-             goal_pos = (grid_sz - 1, grid_sz - 1)
+             preferred_goal = (grid_sz - 1, grid_sz - 1)
 
-        # Sanity check goal position
-        current_scene.grid[goal_pos[1]][goal_pos[0]] = 0 # Ensure clear
+        # Find a clear goal position near the preferred location
+        goal_pos = find_clear_goal_position(current_scene.grid, preferred_goal)
         
         for i, conf in enumerate(config_data["agents"]):
             current_scene.add_agent(start_pos, goal_pos, agent_config={

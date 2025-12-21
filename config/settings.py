@@ -54,7 +54,9 @@ ALGORITHM_MAP = {
     "BFS": "bfs",
     "IDS": "ids",
     "Hill Climbing": "greedy",
-    "Genetic": "genetic"
+    "Genetic": "genetic",
+    "Beam Search": "beam",
+    "Bidirectional": "bidirectional"
 }
 
 # =============================================================================

@@ -163,7 +163,7 @@ class SimConfigPanel:
         }
         
         # Shortened algorithm names for UI
-        self.algorithms = ["A*", "BFS", "DFS", "Dijkstra", "IDS", "Greedy", "Genetic"]
+        self.algorithms = ["A*", "BFS", "DFS", "Dijkstra", "IDS", "Greedy", "Genetic", "Beam", "Bi-Dir"]
         self.shapes = ["Sphere", "Cube", "Drone", "Alien"]
         self.dist_options = ["Near", "Mid", "Far"]
         
@@ -452,7 +452,9 @@ class SimConfigPanel:
             "Dijkstra": "Dijkstra",
             "IDS": "IDS",
             "Greedy": "Hill Climbing",
-            "Genetic": "Genetic"
+            "Genetic": "Genetic",
+            "Beam": "Beam Search",
+            "Bi-Dir": "Bidirectional"
         }
         
         shape_map = {

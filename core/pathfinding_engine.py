@@ -12,6 +12,8 @@ import ai_algorithms.dfs as DFSAlgo
 import ai_algorithms.ids as IDSAlgo
 import ai_algorithms.greedy as GreedyAlgo
 import ai_algorithms.genetic as GeneticAlgo
+import ai_algorithms.beam as BeamAlgo
+import ai_algorithms.bidirectional as BiDirAlgo
 
 class PathfindingEngine:
     """Pathfinding engine as a Facade for ai_algorithms."""
@@ -48,9 +50,13 @@ class PathfindingEngine:
             
         elif algo_lower in ("genetic", "ga", "genetic algorithm"):
             print("🧬 Running Genetic Algorithm pathfinding...")
-            # Genetic needs the utils or grid properly. 
-            # Our Genetic.run takes (start, goal, grid_utils)
             return GeneticAlgo.run(start, goal, self.utils)
+
+        elif algo_lower in ("beam", "beam search"):
+            return BeamAlgo.run(start, goal, self.utils)
+
+        elif algo_lower in ("bidirectional", "bi-dir"):
+            return BiDirAlgo.run(start, goal, self.utils)
             
         else:
             print(f"Warning: Unknown algorithm '{algo}', using A* as default")

@@ -88,6 +88,10 @@ class ForestScene(Scene):
         self.env_manager = EnvironmentObjectManager(self.grid_size, self.cell_size)
         self.env_manager.generate_trees_from_grid(self.grid)
         
+        # Clear goal area of trees (safety measure)
+        goal_pos = (self.grid_size - 1, self.grid_size - 1)
+        self.env_manager.clear_area(goal_pos, radius=1)
+        
         # Fog
         self.fog_system = FogSystem(
             fog_color=self.theme["fog_color"],

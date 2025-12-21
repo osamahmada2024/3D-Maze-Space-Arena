@@ -163,6 +163,30 @@ class EnvironmentObjectManager:
         
         return False
 
+    def clear_area(self, grid_pos: Tuple[int, int], radius: int = 1):
+        """Remove trees within a radius of a grid position (e.g., goal area)."""
+        cx, cy = grid_pos
+        
+        # Convert grid to world coordinates
+        center_wx = (cx - self.grid_size // 2) * self.cell_size
+        center_wz = (cy - self.grid_size // 2) * self.cell_size
+        
+        # Calculate world radius
+        world_radius = (radius + 0.5) * self.cell_size
+        
+        # Filter out trees within radius
+        original_count = len(self.trees)
+        self.trees = [
+            tree for tree in self.trees
+            if (tree['x'] - center_wx) ** 2 + (tree['z'] - center_wz) ** 2 > world_radius ** 2
+        ]
+        
+        removed = original_count - len(self.trees)
+        if removed > 0:
+            print(f"[ENV] Cleared {removed} trees near goal")
+            # Rebuild display list
+            self._build_trees_display_list()
+
 
 # ✅ للتوافق مع الكود القديم (إذا كان مستخدم في مكان آخر)
 def render_tree_at(wx: float, wy: float, wz: float, scale: float = 1.0):

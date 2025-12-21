@@ -88,8 +88,15 @@ class LavaMazeScene(Scene):
         path_set = set(self.path) if self.path else set()
         lava_positions = []
         
+        # Goal position should never have lava
+        goal_pos = (self.grid_size - 1, self.grid_size - 1)
+        start_pos = (0, 0)
+        
         for y in range(self.grid_size):
             for x in range(self.grid_size):
+                # Skip start and goal positions
+                if (x, y) == goal_pos or (x, y) == start_pos:
+                    continue
                 if self.grid[y][x] == 0 and (x, y) not in path_set:
                     if random.random() < 0.12:
                         lava_positions.append((x, y))

@@ -1,9 +1,8 @@
 import heapq
 from typing import List, Tuple, Optional
-from .algorithm_utils import reconstruct_path
 
-def run(start: Tuple[int,int], goal: Tuple[int,int], grid_utils) -> Optional[List[Tuple[int,int]]]:
-    """Dijkstra's search algorithm"""
+def run(start: Tuple[int,int], goal: Tuple[int,int], grid_utils) -> Tuple[Optional[List[Tuple[int,int]]], int]:
+    """Dijkstra's search algorithm. Returns (path, nodes_explored)."""
     open_set = []
     heapq.heappush(open_set, (0, start))
     parent = {start: None}
@@ -13,7 +12,14 @@ def run(start: Tuple[int,int], goal: Tuple[int,int], grid_utils) -> Optional[Lis
         current_cost, current = heapq.heappop(open_set)
         
         if current == goal:
-            return reconstruct_path(parent, start, goal)
+            # Reconstruct path
+            path = []
+            node = goal
+            while node:
+                path.append(node)
+                node = parent[node]
+            path.reverse()
+            return path, len(g_score)
 
         for neighbor in grid_utils.neighbors(*current):
             tentative_g_score = g_score[current] + 1
@@ -23,4 +29,4 @@ def run(start: Tuple[int,int], goal: Tuple[int,int], grid_utils) -> Optional[Lis
                 g_score[neighbor] = tentative_g_score
                 heapq.heappush(open_set, (tentative_g_score, neighbor))
     
-    return []
+    return [], len(g_score)

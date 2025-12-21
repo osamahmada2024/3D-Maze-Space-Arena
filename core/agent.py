@@ -5,7 +5,7 @@ import time
 
 class Agent:
     def __init__(self, start, goal, path, speed=2.0, color=(0, 1, 1), shape_type="sphere_droid", 
-                 trail_length=20, algo_name="Unknown", execution_time=0.0):
+                 trail_length=20, algo_name="Unknown", execution_time=0.0, nodes_explored=0):
         self.start = start              
         self.goal = goal                
         self.path = path                
@@ -14,6 +14,7 @@ class Agent:
         self.shape_type = shape_type
         self.algo_name = algo_name
         self.execution_time = execution_time
+        self.nodes_explored = nodes_explored  # NEW: Track search effort
         
         # ✨ Timing (Seconds)
         self.travel_start_time = None

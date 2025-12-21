@@ -1,15 +1,13 @@
 import heapq
 from typing import List, Tuple, Optional
-from .algorithm_utils import reconstruct_path
 
-def run(start: Tuple[int,int], goal: Tuple[int,int], grid_utils) -> Optional[List[Tuple[int,int]]]:
-    """A* search algorithm"""
+def run(start: Tuple[int,int], goal: Tuple[int,int], grid_utils) -> Tuple[Optional[List[Tuple[int,int]]], int]:
+    """A* search algorithm. Returns (path, nodes_explored)."""
     def heuristic(node, goal):
         # Manhattan distance
         h = abs(node[0] - goal[0]) + abs(node[1] - goal[1])
         
         # Tie-breaker: Cross-product to prefer paths along the straight line
-        # This breaks ties between multiple equal-length paths
         dx1 = node[0] - goal[0]
         dy1 = node[1] - goal[1]
         dx2 = start[0] - goal[0]
@@ -27,7 +25,14 @@ def run(start: Tuple[int,int], goal: Tuple[int,int], grid_utils) -> Optional[Lis
         _, current = heapq.heappop(open_set)
         
         if current == goal:
-            return reconstruct_path(parent, start, goal)
+            # Reconstruct path
+            path = []
+            node = goal
+            while node:
+                path.append(node)
+                node = parent[node]
+            path.reverse()
+            return path, len(g_score)
 
         for neighbor in grid_utils.neighbors(*current):
             tentative_g_score = g_score[current] + 1
@@ -38,4 +43,4 @@ def run(start: Tuple[int,int], goal: Tuple[int,int], grid_utils) -> Optional[Lis
                 f_score = tentative_g_score + heuristic(neighbor, goal)
                 heapq.heappush(open_set, (f_score, neighbor))
     
-    return []
+    return [], len(g_score)

@@ -1,13 +1,9 @@
 import random
 from typing import List, Tuple, Optional
 
-def run(start: Tuple[int,int], goal: Tuple[int,int], grid_utils) -> Optional[List[Tuple[int,int]]]:
-    """
-    Genetic Search Algorithm for pathfinding.
-    Genome: A list of moves (dx, dy).
-    """
+def run(start: Tuple[int,int], goal: Tuple[int,int], grid_utils) -> Tuple[Optional[List[Tuple[int,int]]], int]:
+    """Genetic Search Algorithm. Returns (path, nodes_explored)."""
     
-    # Needs access to grid width/height, which grid_utils has (cols, rows)
     cols = grid_utils.cols
     rows = grid_utils.rows
     grid = grid_utils.grid
@@ -34,7 +30,6 @@ def run(start: Tuple[int,int], goal: Tuple[int,int], grid_utils) -> Optional[Lis
                 path.append(curr)
                 if curr == goal:
                     break
-            # Else stay inplace
         return path
         
     def fitness(genome):
@@ -50,7 +45,10 @@ def run(start: Tuple[int,int], goal: Tuple[int,int], grid_utils) -> Optional[Lis
     best_overall_genome = None
     best_overall_score = -float('inf')
     
+    actual_generations = 0
+    
     for gen in range(generations):
+        actual_generations = gen + 1
         scores = [(fitness(g), g) for g in population]
         scores.sort(key=lambda x: x[0], reverse=True)
         
@@ -74,4 +72,7 @@ def run(start: Tuple[int,int], goal: Tuple[int,int], grid_utils) -> Optional[Lis
             new_population.append(child)
         population = new_population
 
-    return get_path_from_genome(best_overall_genome)
+    # Nodes explored = number of fitness evaluations
+    nodes_explored = actual_generations * population_size
+    
+    return get_path_from_genome(best_overall_genome), nodes_explored

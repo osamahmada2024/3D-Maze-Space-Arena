@@ -25,11 +25,11 @@ class PathfindingEngine:
         self.cols = len(grid[0]) if self.rows > 0 else 0
         self.utils = GridUtils(grid)
 
-    def find_path(self, start: Tuple[int,int], goal: Tuple[int,int], algo: str) -> Optional[List[Tuple[int,int]]]:
-        """Select algorithm and compute path"""
+    def find_path(self, start: Tuple[int,int], goal: Tuple[int,int], algo: str) -> Tuple[Optional[List[Tuple[int,int]]], int]:
+        """Select algorithm and compute path. Returns (path, nodes_explored)."""
         algo_lower = algo.lower()
         
-        # Dispatcher
+        # Dispatcher - All algorithms now return (path, nodes_explored)
         if algo_lower in ("a*", "astar", "a* search"):
             return AStarAlgo.run(start, goal, self.utils)
             

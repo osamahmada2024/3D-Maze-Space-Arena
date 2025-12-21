@@ -99,7 +99,7 @@ class Scene(ABC):
         # Recalculate path for this agent
         engine = PathfindingEngine(self.grid)
         t0 = time.time()
-        path = engine.find_path(start, goal, algo)
+        path, nodes_explored = engine.find_path(start, goal, algo)
         execution_time = (time.time() - t0) * 1000 # ms
         
         if not path:
@@ -115,7 +115,8 @@ class Scene(ABC):
             shape_type=shape,
             trail_length=AGENT_SETTINGS["trail_length"],
             algo_name=algo,
-            execution_time=execution_time
+            execution_time=execution_time,
+            nodes_explored=nodes_explored
         )
         
         self.agents.append(new_agent)
@@ -281,11 +282,11 @@ class Scene(ABC):
         for agent in self.agents:
             if agent.arrived:
                 if not hasattr(agent, '_victory_printed'):
-                    print(f"🎉 Agent ({agent.algo_name}) reached goal! Steps: {agent.steps_taken}, Time: {agent.travel_time:.2f}s")
+                    print(f"🎉 Agent ({agent.algo_name}) reached goal! Steps: {agent.steps_taken}, Nodes Explored: {agent.nodes_explored}, Time: {agent.travel_time:.2f}s")
                     agent._victory_printed = True
             elif agent.stuck:
                 if not hasattr(agent, '_failure_printed'):
-                    print(f"❌ Agent ({agent.algo_name}) FAILED. Steps: {agent.steps_taken}, Time: {agent.travel_time:.2f}s")
+                    print(f"❌ Agent ({agent.algo_name}) FAILED. Steps: {agent.steps_taken}, Nodes Explored: {agent.nodes_explored}, Time: {agent.travel_time:.2f}s")
                     agent._failure_printed = True
             else:
                 all_finished = False

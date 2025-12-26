@@ -10,15 +10,14 @@ from typing import Dict
 
 
 class LavaAudioSystem:
-    """نظام الصوت للمتاهة البركانية - مجلد صوت منفصل"""
+    """Audio system for the volcanic maze - separate sound folder"""
     
-    def __init__(self, assets_dir: str = "assets/lava_audio"):  # ✅ تغيير المسار
+    def __init__(self, assets_dir: str = "assets/lava_audio"):
         self.sound_zones = {}
         self.sounds: Dict[str, pygame.mixer.Sound] = {}
         self.ambient_channel = None
         self._initialized = False
         
-        # إصلاح المسار
         if not os.path.isabs(assets_dir):
             current_file_dir = os.path.dirname(os.path.abspath(__file__))
             project_dir = os.path.dirname(current_file_dir)
@@ -28,17 +27,14 @@ class LavaAudioSystem:
         
         print(f"[LAVA AUDIO] Assets directory: {self.assets_dir}")
         
-        # ✅ إنشاء المجلد إذا لم يكن موجوداً
         if not os.path.exists(self.assets_dir):
             print(f"[LAVA AUDIO] ⚠️ Creating audio folder: {self.assets_dir}")
             os.makedirs(self.assets_dir, exist_ok=True)
         
-        # عرض الملفات الموجودة
         if os.path.exists(self.assets_dir):
             files = os.listdir(self.assets_dir)
             print(f"[LAVA AUDIO] Available files: {files}")
         
-        # تهيئة Mixer
         try:
             if not pygame.mixer.get_init():
                 pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=1024)
@@ -56,7 +52,7 @@ class LavaAudioSystem:
             print(f"[LAVA AUDIO] ❌ Error: {e}")
     
     def _safe_load(self, filename: str, fallback_names: list = None):
-        """تحميل ملف صوت مع دعم أسماء بديلة"""
+        """Load audio file with support for alternative names"""
         names_to_try = [filename]
         if fallback_names:
             names_to_try.extend(fallback_names)
@@ -74,10 +70,10 @@ class LavaAudioSystem:
                     continue
         
         print(f"[LAVA AUDIO] ⚠️ Missing: {filename}")
-        return None  # ✅ إرجاع None بدلاً من صوت صامت
+        return None
     
     def _load_sounds(self) -> Dict[str, pygame.mixer.Sound]:
-        """تحميل أصوات الحمم"""
+        """Load lava sounds"""
         return {
             "lava_bubble": self._safe_load("bubble.mp3", ["lava_bubble.mp3", "lava.mp3"]),
             "rumble": self._safe_load("rumble.mp3", ["rumble.wav", "rumble.ogg"]),
@@ -86,7 +82,7 @@ class LavaAudioSystem:
         }
     
     def _is_valid_sound(self, sound) -> bool:
-        """التحقق من أن الصوت صالح"""
+        """Check that the sound is valid"""
         if sound is None:
             return False
         try:
@@ -110,7 +106,7 @@ class LavaAudioSystem:
             print("[LAVA AUDIO] ⚠️ No ambient sound - add bubble.mp3 to assets/lava_audio/")
     
     def play_footstep(self):
-        """تشغيل صوت الخطوات على الصخور"""
+        """Play footstep sound on rocks"""
         if not self._initialized:
             return
         sound = self.sounds.get("footstep")
@@ -121,7 +117,7 @@ class LavaAudioSystem:
                 ch.play(sound)
     
     def play_burn_damage(self):
-        """تشغيل صوت الحرق"""
+        """Play burn sound"""
         if not self._initialized:
             return
         
@@ -133,7 +129,7 @@ class LavaAudioSystem:
                 self.ambient_channel.play(sound, loops=-1)
     
     def play_rumble(self):
-        """تشغيل صوت الهدير البركاني"""
+        """Play volcanic rumble sound"""
         if not self._initialized:
             return
         sound = self.sounds.get("rumble")
@@ -144,16 +140,15 @@ class LavaAudioSystem:
                 ch.play(sound)
     
     def update(self, dt: float):
-        """تحديث النظام الصوتي"""
+        """Update audio system"""
         if not self._initialized:
             return
         
-        # Random rumble للجو البركاني
         if random.random() < 0.005:
             self.play_rumble()
     
     def cleanup(self):
-        """تنظيف الموارد"""
+        """Clean up resources"""
         if self.ambient_channel:
             self.ambient_channel.stop()
         print("[LAVA AUDIO] ✅ Cleanup complete")

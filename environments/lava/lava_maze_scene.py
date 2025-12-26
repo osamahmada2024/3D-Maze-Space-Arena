@@ -109,7 +109,6 @@ class LavaMazeScene(Scene):
     
     def _create_lava_agent(self, start, goal):
         """✅ إنشاء Agent بالألوان الأصلية من الإعدادات"""
-        # استخدام الألوان الأصلية من config/settings.py
         agent_color = AGENT_SETTINGS["colors"].get(
             self.agent_shape, 
             (0.0, 1.0, 1.0)
@@ -213,7 +212,6 @@ class LavaMazeScene(Scene):
         self.lava_manager.render_zones()
         self.fire_particles.render()
         
-        # ✅ إعادة ضبط الإضاءة قبل رسم الـ Agent
         self._reset_lighting_for_agent()
         glDisable(GL_FOG)
         self._render_agent_and_goal()
@@ -228,7 +226,6 @@ class LavaMazeScene(Scene):
         
         half_world = self.grid_size * self.cell_size / 2.0
         
-        # ========== الطبقة الأساسية (أسود) ==========
         glColor3f(0.05, 0.03, 0.02)
         glBegin(GL_QUADS)
         glNormal3f(0, 1, 0)
@@ -238,12 +235,10 @@ class LavaMazeScene(Scene):
         glVertex3f(-half_world, -0.15, half_world)
         glEnd()
         
-        # ========== طبقة الصخور المتشققة ==========
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         
-        # رسم شقوق عشوائية مع حمم
-        random.seed(42)  # للثبات
+        random.seed(42)
         
         glLineWidth(2.0)
         for _ in range(150):
@@ -256,14 +251,12 @@ class LavaMazeScene(Scene):
             x2 = x1 + length * math.cos(angle)
             z2 = z1 + length * math.sin(angle)
             
-            # شق مظلم
             glColor4f(0.1, 0.08, 0.06, 0.8)
             glBegin(GL_LINES)
             glVertex3f(x1, -0.12, z1)
             glVertex3f(x2, -0.12, z2)
             glEnd()
         
-        # شقوق متوهجة بالحمم
         glow = 0.5 + 0.5 * math.sin(self.fog_pulse * 2)
         glLineWidth(1.5)
         
@@ -277,7 +270,6 @@ class LavaMazeScene(Scene):
             x2 = x1 + length * math.cos(angle)
             z2 = z1 + length * math.sin(angle)
             
-            # حمم في الشق
             glColor4f(1.0, 0.3 * glow, 0.0, 0.4 * glow)
             glBegin(GL_LINES)
             glVertex3f(x1, -0.10, z1)

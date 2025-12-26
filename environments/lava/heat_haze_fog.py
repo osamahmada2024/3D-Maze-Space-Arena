@@ -8,7 +8,7 @@ from OpenGL.GL import *
 
 
 class HeatHazeFog:
-    """نظام الضباب الحراري للمتاهة البركانية"""
+    """Heat haze fog system for the volcanic maze"""
     
     def __init__(self):
         self.fog_color = (0.3, 0.1, 0.05)
@@ -17,7 +17,7 @@ class HeatHazeFog:
         self._initialized = False
     
     def enable(self):
-        """تفعيل الضباب"""
+        """Enable fog"""
         if not self.enabled:
             return
         
@@ -28,12 +28,12 @@ class HeatHazeFog:
         self._initialized = True
     
     def disable(self):
-        """إيقاف الضباب"""
+        """Disable fog"""
         glDisable(GL_FOG)
         self._initialized = False
     
     def update_intensity(self, intensity: float):
-        """تحديث شدة الضباب للتأثير النابض"""
+        """Update fog intensity for pulsing effect"""
         if not self._initialized:
             return
             
@@ -42,7 +42,7 @@ class HeatHazeFog:
         glFogfv(GL_FOG_COLOR, [*self.fog_color, 1.0])
     
     def set_density(self, density: float):
-        """تعيين كثافة الضباب"""
+        """Set fog density"""
         self.fog_density = max(0.0, min(1.0, density))
         if self._initialized:
             glFogf(GL_FOG_DENSITY, self.fog_density)

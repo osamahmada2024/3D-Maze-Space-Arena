@@ -30,7 +30,6 @@ class SpaceScene(Scene):
         # Create agent (from base class)
         self._create_agent(start, goal)
         
-        # ✅ الآن لدينا agent.path - نمرره للـ environment
         agent_path = self.agent.path if hasattr(self.agent, 'path') else None
         
         # Create camera (from base class)
@@ -40,7 +39,7 @@ class SpaceScene(Scene):
         self.environment_renderer = EnvironmentRender3D(
             self.grid, 
             cell_size=self.cell_size,
-            agent_path=agent_path  # ✅ تمرير المسار
+            agent_path=agent_path
         )
         
         # Create base renderers with ground sampler

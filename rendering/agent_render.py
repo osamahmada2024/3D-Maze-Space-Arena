@@ -127,7 +127,6 @@ class AgentRender:
     def _draw_mini_drone(self, agent):
         """Mini Flying Drone - with FAST spinning propellers"""
         
-        # ✅ استخدام pygame.time.get_ticks() للدقة العالية
         current_time = pygame.time.get_ticks() / 1000.0
         
         prop_rotation = (current_time * 1500.0) % 360.0
@@ -156,7 +155,6 @@ class AgentRender:
         
         glColor3f(*agent.color)
         
-        # جسم الـ Drone
         glPushMatrix()
         glScalef(0.4, 0.2, 0.2)
         gluSphere(self._sphere_quad, 1.0, 12, 12)
@@ -171,7 +169,6 @@ class AgentRender:
             (-0.35, 0.12, -0.35)
         ]
         
-        # رسم الأذرع
         glColor3f(agent.color[0] * 0.4, agent.color[1] * 0.4, agent.color[2] * 0.4)
         for px, py, pz in arm_positions:
             glPushMatrix()
@@ -180,7 +177,6 @@ class AgentRender:
             self._draw_cube(0.1)
             glPopMatrix()
         
-        # رسم المراوح
         for i, (px, py, pz) in enumerate(arm_positions):
             glPushMatrix()
             glTranslatef(px, py, pz)

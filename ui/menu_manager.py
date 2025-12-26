@@ -20,7 +20,7 @@ class MenuManager:
         self.YELLOW = (255, 220, 90)
         self.BLUE = (90, 170, 255)
         self.CYAN = (100, 230, 255)
-        self.ORANGE = (255, 140, 50)  # ✅ جديد - للون الحمم
+        self.ORANGE = (255, 140, 50)
 
         # Agent shapes with descriptions
         self.agents = [
@@ -30,11 +30,10 @@ class MenuManager:
             {"name": "Crystal Alien", "key": "crystal_alien", "desc": "Mysterious gem entity"}
         ]
         
-        # ✅ تحديث الـ themes لإضافة LAVA
         self.themes = [
             {"name": "Standard (Space)", "key": "DEFAULT", "desc": "Classic sci-fi maze experience", "color": self.CYAN},
             {"name": "Forest Maze", "key": "FOREST", "desc": "Atmospheric forest with fog and fireflies", "color": (100, 200, 100)},
-            {"name": "Lava Maze 🔥", "key": "LAVA", "desc": "Deadly volcanic maze with lava pools!", "color": self.ORANGE}  # ✅ جديد
+            {"name": "Lava Maze 🔥", "key": "LAVA", "desc": "Deadly volcanic maze with lava pools!", "color": self.ORANGE}
         ]
         
         self.algorithms = ["A* search", "Dijkstra", "DFS", "BFS"]
@@ -67,11 +66,10 @@ class MenuManager:
         pygame.draw.circle(self.screen, color, (x, y), 10)
 
     def draw_theme_icon(self, x, y, theme_key, size=40):
-        """✅ رسم أيقونة لكل theme"""
+        """Draw icon for each theme"""
         center_x, center_y = x + size//2, y + size//2
         
         if theme_key == "DEFAULT":
-            # نجوم للفضاء
             pygame.draw.circle(self.screen, self.CYAN, (center_x, center_y), size//3, 2)
             for i in range(5):
                 angle = i * (2 * math.pi / 5) - math.pi/2
@@ -80,7 +78,6 @@ class MenuManager:
                 pygame.draw.circle(self.screen, self.CYAN, (px, py), 3)
                 
         elif theme_key == "FOREST":
-            # شجرة
             pygame.draw.rect(self.screen, (139, 90, 43), (center_x-3, center_y, 6, size//2))
             pygame.draw.polygon(self.screen, (34, 139, 34), [
                 (center_x, y),
@@ -89,7 +86,6 @@ class MenuManager:
             ])
             
         elif theme_key == "LAVA":
-            # حمم/نار
             pygame.draw.polygon(self.screen, self.ORANGE, [
                 (center_x, y),
                 (x + size - 5, y + size),
@@ -142,14 +138,13 @@ class MenuManager:
             self.screen.blit(subtitle, (self.WIDTH//2 - subtitle.get_width()//2, 85))
 
             for i, theme in enumerate(self.themes):
-                y = 140 + i * 100  # ✅ تعديل المسافات
+                y = 140 + i * 100
                 
                 # Highlight selected
                 if self.selected_theme == theme["key"]:
                     box = pygame.Rect(80, y-10, self.WIDTH-160, 90)
                     pygame.draw.rect(self.screen, (50, 60, 80), box, border_radius=10)
                 
-                # ✅ رسم أيقونة الـ theme
                 self.draw_theme_icon(100, y + 10, theme["key"], 45)
                 
                 # Theme name with color
@@ -165,7 +160,6 @@ class MenuManager:
                 if i == self.cursor_pos:
                     self.draw_cursor(70, y + 35, t)
             
-            # ✅ تحذير للـ Lava
             if self.cursor_pos == 2:  # LAVA selected
                 warning = self.FONT_TINY.render("⚠️ Warning: Lava pools cause damage! Watch your health!", True, self.ORANGE)
                 self.screen.blit(warning, (self.WIDTH//2 - warning.get_width()//2, self.HEIGHT - 80))

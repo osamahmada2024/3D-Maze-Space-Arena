@@ -30,7 +30,6 @@ class Scene(ABC):
         self.agent_shape = agent_shape
         self.algo_name = algo_name
         
-        # Grid Settings (من الإعدادات المركزية)
         self.grid_size = GRID_SETTINGS["size"]
         self.cell_size = GRID_SETTINGS["cell_size"]
         

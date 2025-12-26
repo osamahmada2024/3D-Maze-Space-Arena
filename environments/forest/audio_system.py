@@ -29,29 +29,22 @@ class AudioSystem:
         self.sounds = {}
         self._initialized = False
 
-        # ✅ إصلاح المسار - استخدم مسار السكريبت
         if not os.path.isabs(assets_dir):
-            # احصل على مجلد هذا الملف (forest/)
             current_file_dir = os.path.dirname(os.path.abspath(__file__))
-            # اصعد مستوى واحد للوصول لمجلد المشروع
             project_dir = os.path.dirname(current_file_dir)
-            # المسار الكامل
             self.assets_dir = os.path.join(project_dir, assets_dir)
         else:
             self.assets_dir = assets_dir
         
         print(f"[AUDIO] Assets directory: {self.assets_dir}")
         
-        # ✅ تحقق من وجود المجلد
         if not os.path.exists(self.assets_dir):
             print(f"[AUDIO] ❌ Audio directory not found: {self.assets_dir}")
             return
         
-        # ✅ اعرض الملفات الموجودة
         files = os.listdir(self.assets_dir)
         print(f"[AUDIO] Files found: {files}")
 
-        # تهيئة Mixer
         try:
             if not pygame.mixer.get_init():
                 pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=1024)
@@ -83,7 +76,6 @@ class AudioSystem:
         else:
             print(f"[AUDIO] ⚠️ File not found: {path}")
 
-        # صوت صامت كـ fallback
         try:
             return pygame.mixer.Sound(buffer=bytes([0] * 2000))
         except:

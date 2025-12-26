@@ -56,18 +56,15 @@ class PathRender:
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         
-        # ✨ تحسين: رسم الذيل كـ LINE_STRIP واحد مع تغيير الألوان
         glLineWidth(3.0)
         glBegin(GL_LINE_STRIP)
         
         for i, pos in enumerate(history_list):
-            # حساب الشفافية - القديم شفاف، الجديد واضح
             if history_length > 1:
                 norm = float(i) / float(history_length - 1)
             else:
                 norm = 1.0
             
-            # تأثير Flash - تلاشي تدريجي
             alpha = norm ** 0.5
             glow = 0.5 + (norm * 0.5)
             

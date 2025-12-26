@@ -27,14 +27,12 @@ class Agent:
         self.visited_cells = set()
         self.visited_cells.add(start)
         
-        # ✨ deque للأداء الأفضل
         self.trail_length = trail_length
         self.history = deque(maxlen=trail_length)
         
         self.arrived = False
         self.stuck = False # NEW: Track if path complete but goal not reached
         
-        # ✨ تخزين آخر موقع لتجنب إضافة نقاط مكررة
         self._last_history_pos = None
         self._history_min_dist = 0.05
         
@@ -54,7 +52,6 @@ class Agent:
 
         self.move(dt)
 
-        # ✨ إضافة للـ history
         if self._last_history_pos is None:
             self.history.append(self.position)
             self._last_history_pos = self.position

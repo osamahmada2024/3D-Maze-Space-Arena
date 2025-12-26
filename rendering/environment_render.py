@@ -1,5 +1,4 @@
 # rendering/EnvironmentRender.py
-# ====== النسخة المحسّنة مع منع التداخل ======
 
 import math
 import random
@@ -37,27 +36,23 @@ class EnvironmentRender3D:
         self.grid = grid
         self.grid_size = len(grid)
         self.cell_size = float(cell_size) if cell_size else 1.0
-        self.agent_path = agent_path  # ✅ مسار الـ agent
+        self.agent_path = agent_path
 
         self._particles = []
         self._tree_instances = []
         
-        # ✅ إنشاء Quadric واحد وإعادة استخدامه
         self._shared_quadric = gluNewQuadric()
         gluQuadricNormals(self._shared_quadric, GLU_SMOOTH)
         
-        # ✅ Display Lists للـ geometry الثابت
         self._ground_display_list = None
         self._mountains_display_list = None
         self._obstacles_display_list = None
         self._forest_display_list = None
         self._sky_display_list = None
         
-        # ✅ تحويل المسار إلى مجموعة من الإحداثيات للفحص السريع
         self._path_cells = set()
         if agent_path:
             for pos in agent_path:
-                # إضافة الخلية نفسها والخلايا المجاورة لها (buffer zone)
                 for dx in range(-2, 3):
                     for dy in range(-2, 3):
                         self._path_cells.add((pos[0] + dx, pos[1] + dy))
@@ -71,7 +66,6 @@ class EnvironmentRender3D:
         
         rnd = random.Random(42)
         for (tx, tz) in _tree_points:
-            # ✅ التحقق من عدم وجود تداخل مع المسار
             tree_grid_x = tx + self.grid_size // 2
             tree_grid_z = tz + self.grid_size // 2
             
@@ -115,37 +109,31 @@ class EnvironmentRender3D:
         glFogf(GL_FOG_DENSITY, 0.018)
         glFogi(GL_FOG_MODE, GL_EXP2)
         
-        # ✅ بناء الـ Display Lists مرة واحدة
         self._build_all_display_lists()
 
     def __del__(self):
-        """تنظيف الموارد"""
+        """Clean up resources"""
         try:
             gluDeleteQuadric(self._shared_quadric)
         except:
             pass
 
     def _is_safe_position(self, grid_x, grid_z):
-        """✅ التحقق من أن الموقع آمن (بعيد عن المسار)"""
-        # التحقق من الحدود
         if grid_x < 0 or grid_x >= self.grid_size or grid_z < 0 or grid_z >= self.grid_size:
             return False
         
-        # التحقق من عدم التداخل مع المسار
         if (grid_x, grid_z) in self._path_cells:
             return False
         
-        # التحقق من عدم وجود عائق في الـ grid
         if self.grid[grid_z][grid_x] == 1:
             return False
         
         return True
 
     def _get_safe_mountain_positions(self):
-        """✅ الحصول على مواقع آمنة للجبال بعيداً عن المسار"""
+        """Get safe positions for mountains away from the path"""
         safe_positions = []
         
-        # مواقع محتملة للجبال
         potential_positions = [
             (-self.grid_size * 0.25, -self.grid_size * 0.10),
             (self.grid_size * 0.20, self.grid_size * 0.055),
@@ -156,11 +144,9 @@ class EnvironmentRender3D:
         
         for pos in potential_positions:
             x_pos, z_pos = pos
-            # تحويل إلى إحداثيات الـ grid للفحص
             grid_x = int((x_pos / self.cell_size) + self.grid_size // 2)
             grid_z = int((z_pos / self.cell_size) + self.grid_size // 2)
             
-            # التحقق من أن الجبل بعيد عن المسار (radius = 3 خلايا)
             is_safe = True
             for dx in range(-3, 4):
                 for dz in range(-3, 4):
@@ -175,7 +161,6 @@ class EnvironmentRender3D:
             if is_safe:
                 safe_positions.append(pos)
             
-            # نحتاج على الأقل 2-3 جبال
             if len(safe_positions) >= 3:
                 break
         
@@ -196,11 +181,10 @@ class EnvironmentRender3D:
             self._particles.append(p)
 
     # =========================================================================
-    # ✅ Display List Builders - تُبنى مرة واحدة فقط
     # =========================================================================
     
     def _build_all_display_lists(self):
-        """بناء جميع الـ Display Lists مرة واحدة"""
+        """Build all Display Lists once"""
         print("[ENV] Building display lists...")
         
         # Sky
@@ -236,7 +220,7 @@ class EnvironmentRender3D:
         print("[ENV] Display lists built successfully!")
 
     def _build_sky_dome(self):
-        """بناء السماء"""
+        """Build the sky"""
         glDisable(GL_LIGHTING)
         glPushMatrix()
         glColor3f(0.035, 0.045, 0.08)
@@ -247,7 +231,7 @@ class EnvironmentRender3D:
         glEnable(GL_LIGHTING)
 
     def _build_ground(self):
-        """بناء الأرضية"""
+        """Build the ground"""
         mesh = self._build_ground_mesh()
         verts = mesh["verts"]
         normals = mesh["normals"]
@@ -352,7 +336,7 @@ class EnvironmentRender3D:
         return y
 
     def _build_mountains(self):
-        """✅ بناء الجبال في مواقع آمنة فقط"""
+        """Build mountains in safe positions only"""
         safe_positions = self._get_safe_mountain_positions()
         
         configs = [
@@ -375,7 +359,7 @@ class EnvironmentRender3D:
             glPopMatrix()
 
     def _build_mountain_mesh_geometry(self, radius, height, radial_res, angular_res, noise_scale, noise_amp, seed):
-        """رسم الجبل مباشرة (للـ display list)"""
+        """Draw the mountain directly (for the display list)"""
         mesh = self._get_or_build_mountain_mesh(radius, height, radial_res, angular_res, noise_scale, noise_amp, seed)
         verts = mesh["verts"]
         normals = mesh["normals"]
@@ -480,7 +464,7 @@ class EnvironmentRender3D:
         return mesh
 
     def _build_obstacles(self):
-        """بناء العوائق"""
+        """Build obstacles"""
         half_grid = self.grid_size // 2
         for y in range(self.grid_size):
             for x in range(self.grid_size):
@@ -502,12 +486,12 @@ class EnvironmentRender3D:
                     glPopMatrix()
 
     def _build_forest(self):
-        """بناء الأشجار"""
+        """Build trees"""
         for inst in self._tree_instances:
             self._build_tree_instance(inst)
 
     def _build_tree_instance(self, inst):
-        """بناء شجرة واحدة (للـ display list)"""
+        """Build a single tree (for the display list)"""
         x = inst["x"]
         z = inst["z"]
         trunk_h = inst["trunk_h"]
@@ -560,36 +544,35 @@ class EnvironmentRender3D:
         return x, y, z
 
     # =========================================================================
-    # ✅ Draw Methods - تستخدم Display Lists
     # =========================================================================
 
     def _draw_sky_dome(self):
-        """رسم السماء (من Display List)"""
+        """Draw the sky (from Display List)"""
         if self._sky_display_list:
             glCallList(self._sky_display_list)
 
     def _draw_ground_mesh(self):
-        """رسم الأرضية (من Display List)"""
+        """Draw the ground (from Display List)"""
         if self._ground_display_list:
             glCallList(self._ground_display_list)
 
     def _draw_mountains(self):
-        """رسم الجبال (من Display List)"""
+        """Draw mountains (from Display List)"""
         if self._mountains_display_list:
             glCallList(self._mountains_display_list)
 
     def _draw_obstacles(self):
-        """رسم العوائق (من Display List)"""
+        """Draw obstacles (from Display List)"""
         if self._obstacles_display_list:
             glCallList(self._obstacles_display_list)
 
     def _draw_forest(self):
-        """رسم الأشجار (من Display List)"""
+        """Draw trees (from Display List)"""
         if self._forest_display_list:
             glCallList(self._forest_display_list)
 
     def _draw_particles(self, t):
-        """رسم الجسيمات (ديناميكية - لا يمكن استخدام display list)"""
+        """Draw particles (dynamic - cannot use display list)"""
         if self._last_particles_time is None:
             dt = 0.0
         else:
@@ -629,7 +612,6 @@ class EnvironmentRender3D:
             gluSphere(self._shared_quadric, radius, 8, 6)
             glPopMatrix()
 
-            # Glow (مبسط)
             glow_radius = radius * 2.0
             glow_alpha = alpha * 0.3
 
@@ -650,7 +632,7 @@ class EnvironmentRender3D:
     # =========================================================================
 
     def draw(self, time_value):
-        """الدالة الرئيسية للرسم"""
+        """The main drawing function"""
         self._draw_sky_dome()
         self._draw_ground_mesh()
         self._draw_mountains()

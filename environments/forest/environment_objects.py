@@ -23,7 +23,6 @@ class EnvironmentObjectManager:
         self.trees = []
         self.collision_radius = 0.35
         
-        # ✅ Shared quadric - إنشاء مرة واحدة فقط
         self._quadric = gluNewQuadric()
         gluQuadricNormals(self._quadric, GLU_SMOOTH)
         
@@ -32,7 +31,7 @@ class EnvironmentObjectManager:
         self._initialized = False
     
     def __del__(self):
-        """تنظيف الموارد"""
+        """Clean up resources"""
         try:
             if self._quadric:
                 gluDeleteQuadric(self._quadric)
@@ -48,7 +47,6 @@ class EnvironmentObjectManager:
         for y in range(len(grid)):
             for x in range(len(grid[0])):
                 if grid[y][x] == 1:  # Wall = Tree
-                    # تقليل الكثافة 50%
                     if random.random() > 0.5:
                         continue
 
@@ -68,11 +66,10 @@ class EnvironmentObjectManager:
         
         print(f"[ENV] Generated {len(self.trees)} trees")
         
-        # ✅ بناء Display List لكل الأشجار مرة واحدة
         self._build_trees_display_list()
     
     def _build_trees_display_list(self):
-        """بناء Display List واحد لكل الأشجار"""
+        """Build a single Display List for all trees"""
         if self._all_trees_display_list:
             glDeleteLists(self._all_trees_display_list, 1)
         
@@ -88,7 +85,7 @@ class EnvironmentObjectManager:
         print(f"[ENV] Trees display list built successfully!")
     
     def _draw_tree(self, x: float, y: float, z: float, scale: float):
-        """رسم شجرة واحدة (للـ display list)"""
+        """Draw a single tree (for the display list)"""
         trunk_height = 1.8 * scale
         trunk_radius = 0.12 * scale
         foliage_radius = 0.8 * scale
@@ -96,33 +93,29 @@ class EnvironmentObjectManager:
         glPushMatrix()
         glTranslatef(x, y, z)
         
-        # ========== الجذع ==========
         glColor3f(0.55, 0.35, 0.15)
         glPushMatrix()
         glRotatef(-90, 1, 0, 0)
         gluCylinder(self._quadric, trunk_radius, trunk_radius * 0.85, 
-                   trunk_height, 12, 4)  # ✅ تقليل segments
+                   trunk_height, 12, 4)
         glPopMatrix()
         
-        # ========== أوراق الشجر الرئيسية ==========
         # Main foliage
         glPushMatrix()
         glTranslatef(0, trunk_height * 0.7, 0)
         glColor3f(0.12, 0.35, 0.15)
-        gluSphere(self._quadric, foliage_radius, 12, 12)  # ✅ تقليل segments
+        gluSphere(self._quadric, foliage_radius, 12, 12)
         glPopMatrix()
         
         # Upper foliage
         glPushMatrix()
         glTranslatef(0, trunk_height * 0.9, 0)
         glColor3f(0.18, 0.45, 0.20)
-        gluSphere(self._quadric, foliage_radius * 0.75, 10, 10)  # ✅ تقليل segments
+        gluSphere(self._quadric, foliage_radius * 0.75, 10, 10)
         glPopMatrix()
         
-        # ========== أوراق جانبية (مُبسطة) ==========
         glColor3f(0.15, 0.40, 0.18)
         
-        # فقط 4 كرات جانبية بدلاً من 6
         side_positions = [
             (-0.4 * scale, trunk_height * 0.6, 0),
             (0.4 * scale, trunk_height * 0.6, 0),
@@ -133,7 +126,7 @@ class EnvironmentObjectManager:
         for px, py, pz in side_positions:
             glPushMatrix()
             glTranslatef(px, py, pz)
-            gluSphere(self._quadric, foliage_radius * 0.45, 8, 8)  # ✅ تقليل segments
+            gluSphere(self._quadric, foliage_radius * 0.45, 8, 8)
             glPopMatrix()
         
         glPopMatrix()
@@ -145,7 +138,6 @@ class EnvironmentObjectManager:
         
         glEnable(GL_LIGHTING)
         
-        # ✅ استدعاء Display List واحد فقط!
         if self._all_trees_display_list:
             glCallList(self._all_trees_display_list)
     
@@ -188,12 +180,11 @@ class EnvironmentObjectManager:
             self._build_trees_display_list()
 
 
-# ✅ للتوافق مع الكود القديم (إذا كان مستخدم في مكان آخر)
 def render_tree_at(wx: float, wy: float, wz: float, scale: float = 1.0):
     """Backward compatibility - not recommended for many trees"""
-    pass  # لا تفعل شيء - الأشجار تُرسم من الـ display list
+    pass
 
 
 def render_grass_floor_at(wx: float, wz: float, size: float = 1.0):
     """Render grass - simplified"""
-    pass  # الأرضية تُرسم من forest_scene
+    pass

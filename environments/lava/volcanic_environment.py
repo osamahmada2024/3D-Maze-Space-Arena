@@ -12,7 +12,7 @@ from OpenGL.GLU import *
 
 
 class VolcanicRock:
-    """صخرة بركانية محسّنة مع شقوق متوهجة"""
+    """Enhanced volcanic rock with glowing cracks"""
     
     def __init__(self, x: float, y: float, z: float, scale: float = 1.0):
         self.x = x
@@ -23,38 +23,32 @@ class VolcanicRock:
         self.glow_phase = random.uniform(0, math.pi * 2)
         self.glow_speed = random.uniform(1.5, 3.0)
         
-        # تنوع في الشكل
         self.height_scale = random.uniform(0.6, 1.2)
         self.width_scale = random.uniform(0.8, 1.2)
         
-        # شقوق متوهجة
         self.cracks = self._generate_cracks()
         
-        # لون الصخرة (تنوع)
         darkness = random.uniform(0.08, 0.18)
         self.rock_color = (darkness, darkness * 0.8, darkness * 0.6)
     
     def _generate_cracks(self):
-        """توليد شقوق عشوائية"""
+        """Generate random cracks"""
         cracks = []
         num_cracks = random.randint(3, 7)
         
         for _ in range(num_cracks):
-            # شق يبدأ من نقطة عشوائية
             start_angle = random.uniform(0, math.pi * 2)
             start_r = random.uniform(0.1, 0.3)
             
             x1 = start_r * math.cos(start_angle)
             z1 = start_r * math.sin(start_angle)
             
-            # ينتهي عند نقطة أبعد
             end_r = random.uniform(0.35, 0.55)
             angle_offset = random.uniform(-0.5, 0.5)
             
             x2 = end_r * math.cos(start_angle + angle_offset)
             z2 = end_r * math.sin(start_angle + angle_offset)
             
-            # سمك الشق
             width = random.uniform(0.02, 0.05)
             
             cracks.append({
@@ -68,7 +62,7 @@ class VolcanicRock:
 
 
 class VolcanicEnvironmentManager:
-    """مدير البيئة البركانية المحسّن"""
+    """Enhanced volcanic environment manager"""
     
     def __init__(self, grid_size: int = 25, cell_size: float = 1.0):
         self.grid_size = grid_size
@@ -91,21 +85,19 @@ class VolcanicEnvironmentManager:
             pass
     
     def generate_rocks_from_grid(self, grid):
-        """توليد صخور بركانية من الشبكة"""
+        """Generate volcanic rocks from the grid"""
         self.rocks = []
         
         for y in range(len(grid)):
             for x in range(len(grid[0])):
                 if grid[y][x] == 1:
-                    if random.random() > 0.2:  # 80% كثافة
+                    if random.random() > 0.2:
                         wx = (x - self.grid_size // 2) * self.cell_size
                         wz = (y - self.grid_size // 2) * self.cell_size
                         
-                        # صخرة رئيسية
                         scale = random.uniform(0.7, 1.1)
                         self.rocks.append(VolcanicRock(wx, 0.0, wz, scale))
                         
-                        # صخور صغيرة حولها (أحياناً)
                         if random.random() < 0.3:
                             offset_x = random.uniform(-0.3, 0.3)
                             offset_z = random.uniform(-0.3, 0.3)
@@ -118,7 +110,7 @@ class VolcanicEnvironmentManager:
         self._build_display_list()
     
     def _build_display_list(self):
-        """بناء Display List للصخور الثابتة"""
+        """Build Display List for static rocks"""
         if self._display_list:
             glDeleteLists(self._display_list, 1)
         
@@ -132,12 +124,11 @@ class VolcanicEnvironmentManager:
         print("[LAVA ENV] ✅ Display list built!")
     
     def _draw_rock_geometry(self, rock: VolcanicRock):
-        """رسم هندسة الصخرة"""
+        """Draw rock geometry"""
         glPushMatrix()
         glTranslatef(rock.x, rock.y, rock.z)
         glRotatef(rock.rotation, 0, 1, 0)
         
-        # الصخرة الرئيسية - شكل غير منتظم
         glColor3f(*rock.rock_color)
         
         glPushMatrix()
@@ -147,17 +138,14 @@ class VolcanicEnvironmentManager:
             rock.scale * rock.width_scale
         )
         
-        # قاعدة الصخرة (أعرض)
         glPushMatrix()
         glScalef(1.2, 0.4, 1.2)
         gluSphere(self._quadric, 0.5, 8, 6)
         glPopMatrix()
         
-        # جسم الصخرة
         glTranslatef(0, 0.2, 0)
         gluSphere(self._quadric, 0.45, 8, 6)
         
-        # قمة الصخرة (أصغر)
         glTranslatef(0, 0.25, 0)
         glScalef(0.7, 0.8, 0.7)
         gluSphere(self._quadric, 0.35, 6, 5)
@@ -166,7 +154,7 @@ class VolcanicEnvironmentManager:
         glPopMatrix()
     
     def update(self, dt: float):
-        """تحديث الوقت للتأثيرات المتحركة"""
+        """Update time for animated effects"""
         self._time += dt
         for rock in self.rocks:
             rock.glow_phase += dt * rock.glow_speed
@@ -175,18 +163,16 @@ class VolcanicEnvironmentManager:
         """رسم جميع الصخور مع الشقوق المتوهجة"""
         glEnable(GL_LIGHTING)
         
-        # رسم الصخور من Display List
         if self._display_list:
             glCallList(self._display_list)
         
-        # رسم الشقوق المتوهجة (ديناميكية)
         self._render_glowing_cracks()
     
     def _render_glowing_cracks(self):
         """رسم الشقوق المتوهجة"""
         glDisable(GL_LIGHTING)
         glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE)  # Additive blending للتوهج
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE)
         glLineWidth(3.0)
         
         for rock in self.rocks:
@@ -198,7 +184,6 @@ class VolcanicEnvironmentManager:
             glScalef(rock.scale, rock.scale, rock.scale)
             
             for crack in rock.cracks:
-                # لون الشق (برتقالي/أحمر متوهج)
                 intensity = crack['intensity'] * glow
                 glColor4f(1.0, 0.4 * intensity, 0.0, intensity * 0.8)
                 
@@ -208,7 +193,6 @@ class VolcanicEnvironmentManager:
                 glVertex3f(crack['x2'], 0.01, crack['z2'])
                 glEnd()
                 
-                # توهج حول الشق
                 glColor4f(1.0, 0.3, 0.0, intensity * 0.3)
                 glLineWidth(crack['width'] * 100)
                 glBegin(GL_LINES)

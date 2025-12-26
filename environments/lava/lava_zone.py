@@ -12,7 +12,7 @@ from OpenGL.GLU import *
 
 
 class LavaBubble:
-    """فقاعة حمم"""
+    """Lava bubble"""
     
     def __init__(self, x: float, z: float, pool_radius: float):
         self.x = x + random.uniform(-pool_radius * 0.6, pool_radius * 0.6)
@@ -40,7 +40,6 @@ class LavaBubble:
         glPushMatrix()
         glTranslatef(self.x, self.y, self.z)
         
-        # رسم دائرة للفقاعة
         glBegin(GL_TRIANGLE_FAN)
         glVertex3f(0, 0, 0)
         segments = 12
@@ -67,13 +66,11 @@ class LavaZone:
         self.radius = radius
         self.damage_rate = damage_rate
         
-        # تأثيرات بصرية
         self.glow_intensity = random.uniform(0.8, 1.0)
         self.animation_offset = random.uniform(0, math.pi * 2)
         self.wave_offset = random.uniform(0, math.pi * 2)
         self.time = 0.0
         
-        # فقاعات
         self.bubbles: List[LavaBubble] = []
         self.bubble_timer = 0.0
         self.bubble_interval = random.uniform(0.3, 0.8)
@@ -92,14 +89,12 @@ class LavaZone:
         self.time += dt
         self.glow_intensity = 0.7 + 0.3 * math.sin(self.time * 2.0 + self.animation_offset)
         
-        # تحديث الفقاعات
         self.bubble_timer += dt
         if self.bubble_timer >= self.bubble_interval:
             self.bubbles.append(LavaBubble(self.x, self.z, self.radius))
             self.bubble_timer = 0.0
             self.bubble_interval = random.uniform(0.2, 0.6)
         
-        # تحديث وإزالة الفقاعات الميتة
         for bubble in self.bubbles:
             bubble.update(dt)
         self.bubbles = [b for b in self.bubbles if b.alive]
@@ -109,8 +104,6 @@ class LavaZone:
         glTranslatef(self.x, self.y, self.z)
         
         segments = 24
-        
-        # ========== الطبقة السفلية (أحمر داكن) ==========
         glColor4f(0.4, 0.1, 0.0, 1.0)
         glBegin(GL_TRIANGLE_FAN)
         glVertex3f(0, 0.01, 0)
@@ -123,13 +116,11 @@ class LavaZone:
             )
         glEnd()
         
-        # ========== الطبقة الرئيسية (برتقالي متموج) ==========
         glColor4f(1.0, 0.4, 0.0, 0.9 * self.glow_intensity)
         glBegin(GL_TRIANGLE_FAN)
         glVertex3f(0, 0.02, 0)
         for i in range(segments + 1):
             angle = 2.0 * math.pi * i / segments
-            # موجة على الحواف
             wave = 0.03 * math.sin(self.time * 3.0 + angle * 3 + self.wave_offset)
             r = self.radius * 0.9 + wave
             glVertex3f(
@@ -139,7 +130,6 @@ class LavaZone:
             )
         glEnd()
         
-        # ========== المركز المتوهج (أصفر) ==========
         glColor4f(1.0, 0.8, 0.2, 0.8 * self.glow_intensity)
         glBegin(GL_TRIANGLE_FAN)
         glVertex3f(0, 0.03, 0)
@@ -154,7 +144,6 @@ class LavaZone:
             )
         glEnd()
         
-        # ========== النقطة الساخنة (أبيض/أصفر فاتح) ==========
         hot_glow = 0.5 + 0.5 * math.sin(self.time * 5.0)
         glColor4f(1.0, 1.0, 0.7, 0.6 * hot_glow)
         glBegin(GL_TRIANGLE_FAN)
@@ -171,7 +160,6 @@ class LavaZone:
         
         glPopMatrix()
         
-        # رسم الفقاعات
         for bubble in self.bubbles:
             bubble.render()
     
@@ -180,7 +168,6 @@ class LavaZone:
         glPushMatrix()
         glTranslatef(self.x, self.y - 0.01, self.z)
         
-        # هالة خارجية
         glColor4f(1.0, 0.3, 0.0, 0.2 * self.glow_intensity)
         glBegin(GL_TRIANGLE_FAN)
         glVertex3f(0, 0, 0)
@@ -211,7 +198,6 @@ class LavaZoneManager:
         for gx, gy in grid_positions:
             wx = (gx - grid_size // 2) * cell_size
             wz = (gy - grid_size // 2) * cell_size
-            # تنوع في الحجم
             actual_radius = radius * random.uniform(0.7, 1.2)
             self.add_zone(wx, -0.05, wz, actual_radius)
         
@@ -239,13 +225,11 @@ class LavaZoneManager:
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         
-        # رسم التوهج أولاً (خلف)
         glDepthMask(GL_FALSE)
         for zone in self.zones:
             zone.render_glow()
         glDepthMask(GL_TRUE)
         
-        # رسم البرك
         for zone in self.zones:
             zone.render()
         

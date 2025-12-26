@@ -41,7 +41,7 @@ GRID_SETTINGS = {
     "cell_size": 1.0,
     "obstacle_prob_space": 0.25,
     "obstacle_prob_forest": 0.35,
-    "obstacle_prob_lava": 0.35  # ✅ جديد - للمتاهة البركانية
+    "obstacle_prob_lava": 0.35
 }
 
 # =============================================================================
@@ -81,31 +81,29 @@ THEME_SETTINGS = {
         "particles_enabled": True,
         "audio_enabled": False
     },
-    # ✅ جديد - إعدادات المتاهة البركانية
     "LAVA": {
         "name": "Lava Maze",
-        "bg_color": (0.1, 0.05, 0.0, 1.0),  # خلفية حمراء داكنة
+        "bg_color": (0.1, 0.05, 0.0, 1.0),
         "fog_enabled": True,
-        "fog_color": (0.3, 0.1, 0.05),      # ضباب برتقالي
+        "fog_color": (0.3, 0.1, 0.05),
         "fog_density": 0.025,
         "particles_enabled": True,
         "audio_enabled": True,
-        # إعدادات خاصة بالحمم
-        "lava_coverage": 0.12,              # نسبة تغطية الحمم
-        "lava_damage": 10.0,                # الضرر من الحمم
-        "health_start": 100.0               # الصحة الابتدائية
+        "lava_coverage": 0.12,
+        "lava_damage": 10.0,
+        "health_start": 100.0
     }
 }
 
 # =============================================================================
-# LAVA SPECIFIC SETTINGS (إعدادات إضافية للحمم)
+# LAVA SPECIFIC SETTINGS
 # =============================================================================
 LAVA_SETTINGS = {
     "agent_colors": {
-        "sphere_droid": (1.0, 0.5, 0.0),   # برتقالي (مقاوم للنار)
-        "robo_cube": (0.8, 0.2, 0.2),      # أحمر داكن
-        "mini_drone": (1.0, 0.3, 0.0),     # برتقالي فاتح
-        "crystal_alien": (1.0, 0.8, 0.0)   # أصفر برتقالي
+        "sphere_droid": (1.0, 0.5, 0.0),
+        "robo_cube": (0.8, 0.2, 0.2),
+        "mini_drone": (1.0, 0.3, 0.0),
+        "crystal_alien": (1.0, 0.8, 0.0)
     },
     "ember_count": 200,
     "rock_density": 0.7
